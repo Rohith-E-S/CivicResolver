@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api/axios";
 
@@ -49,120 +49,68 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="bg-background text-on-background min-h-screen flex flex-col items-center justify-center p-6 relative z-0">
-      <main className="w-full max-w-md flex flex-col items-center z-10">
-        <div className="mb-12 flex flex-col items-center">
-          <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-full shadow-sm border border-outline-variant/15 flex items-center gap-2 mb-8">
-            <span className="material-symbols-outlined text-surface-tint text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>shield_person</span>
-            <span className="text-[0.7rem] font-bold tracking-[0.15em] uppercase text-on-surface-variant">Editorial Governance</span>
-          </div>
-          <div className="w-16 h-16 rounded-2xl bg-surface-container-low flex items-center justify-center mb-6">
-            <span className="material-symbols-outlined text-surface-tint text-3xl">lock_reset</span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-primary text-center mb-4">
-            Forgot Your Password?
-          </h1>
-          <p className="text-on-surface-variant text-center text-sm md:text-base leading-relaxed font-normal max-w-[320px]">
+    <div className="ui-page">
+      <main className="ui-container py-10 sm:py-16">
+        <div className="mx-auto max-w-xl ui-card">
+          <h1 className="ui-title">Reset password</h1>
+          <p className="ui-subtitle">
             {isOtpSent
-              ? "Enter the OTP sent to your email to verify your request."
-              : "No worries! Enter your email below and we'll send you an OTP to reset it."}
+              ? "Enter the OTP from your email to continue."
+              : "Enter your email and we will send a one-time password."}
           </p>
-        </div>
 
-        <div className="w-full bg-surface-container-lowest p-8 rounded-xl shadow-[0_24px_48px_-12px_rgba(0,0,0,0.04)]">
-          {error && (
-            <div className="mb-6 p-4 bg-error-container border border-error/30 rounded-lg">
-              <p className="text-on-error-container text-sm font-medium">{error}</p>
-            </div>
-          )}
-          {message && (
-            <div className="mb-6 p-4 bg-green-100 border border-green-300 rounded-lg">
-              <p className="text-green-800 text-sm font-medium">{message}</p>
-            </div>
-          )}
+          {error && <div className="ui-alert ui-alert-error mt-5">{error}</div>}
+          {message && <div className="ui-alert ui-alert-success mt-5">{message}</div>}
 
           {!isOtpSent ? (
-            <form onSubmit={sendPasswordResetOtp} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[0.75rem] font-bold tracking-widest uppercase text-on-surface-variant ml-1" htmlFor="email">
-                  Email address
+            <form onSubmit={sendPasswordResetOtp} className="mt-6 space-y-4">
+              <div>
+                <label className="ui-label" htmlFor="email">
+                  Email
                 </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <span className="material-symbols-outlined text-outline text-lg">mail</span>
-                  </div>
-                  <input
-                    className="block w-full pl-11 pr-4 py-4 bg-surface-container-highest border-none rounded-lg focus:ring-2 focus:ring-surface-tint focus:bg-surface-container-lowest transition-all placeholder:text-outline/60 text-on-surface"
-                    id="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@authority.gov"
-                    required
-                    type="email"
-                  />
-                </div>
+                <input
+                  id="email"
+                  type="email"
+                  className="ui-input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  required
+                />
               </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-4 px-6 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-lg shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
-              >
-                {loading ? "Sending..." : "Send Reset OTP"}
-                {!loading && <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">arrow_forward</span>}
+              <button type="submit" disabled={loading} className="ui-btn ui-btn-primary w-full">
+                {loading ? "Sending..." : "Send OTP"}
               </button>
             </form>
           ) : (
-            <form onSubmit={verifyPasswordResetOtp} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[0.75rem] font-bold tracking-widest uppercase text-on-surface-variant ml-1" htmlFor="otp">
-                  Enter OTP
+            <form onSubmit={verifyPasswordResetOtp} className="mt-6 space-y-4">
+              <div>
+                <label className="ui-label" htmlFor="otp">
+                  One-time password
                 </label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <span className="material-symbols-outlined text-outline text-lg">vpn_key</span>
-                  </div>
-                  <input
-                    className="block w-full pl-11 pr-4 py-4 bg-surface-container-highest border-none rounded-lg focus:ring-2 focus:ring-surface-tint focus:bg-surface-container-lowest transition-all placeholder:text-outline/60 text-on-surface tracking-widest font-mono"
-                    id="otp"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
-                    placeholder="••••••"
-                    required
-                    type="text"
-                  />
-                </div>
+                <input
+                  id="otp"
+                  type="text"
+                  className="ui-input"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="Enter 6-digit OTP"
+                  required
+                />
               </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-4 px-6 bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold rounded-lg shadow-lg hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
-              >
-                {loading ? "Verifying..." : "Verify & Proceed"}
-                {!loading && <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">arrow_forward</span>}
+              <button type="submit" disabled={loading} className="ui-btn ui-btn-primary w-full">
+                {loading ? "Verifying..." : "Verify OTP"}
               </button>
             </form>
           )}
-        </div>
 
-        <div className="mt-8">
-          <Link to="/login" className="flex items-center gap-2 text-on-primary-fixed-variant hover:text-surface-tint font-semibold text-sm transition-colors group">
-            <span className="material-symbols-outlined text-lg">keyboard_backspace</span>
-            <span>Back to login</span>
-          </Link>
+          <div className="mt-6 text-center">
+            <Link to="/login" className="text-sm font-medium text-[color:var(--ui-accent)] hover:underline">
+              Back to sign in
+            </Link>
+          </div>
         </div>
       </main>
-
-      <footer className="mt-auto pt-12 pb-6 flex flex-col items-center gap-4 z-10">
-        <div className="h-px w-12 bg-outline-variant/30"></div>
-        <p className="text-[0.65rem] font-medium tracking-widest uppercase text-outline">
-          Resolution Engine v2.4.0
-        </p>
-      </footer>
-
-      <div className="fixed top-0 left-0 w-full h-full -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-surface-tint/5 rounded-full blur-[120px]"></div>
-        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-secondary-container/10 rounded-full blur-[120px]"></div>
-      </div>
     </div>
   );
 };

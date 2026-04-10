@@ -95,7 +95,6 @@ fun AppNavigation(
                     isAdmin = authState.user?.isAdmin == true,
                     userName = authState.user?.fullName ?: "Citizen",
                     onNavigateToCreate = { navController.navigate(Screen.CreateComplaint.route) },
-                    onNavigateToChat = { complaintId -> navController.navigate(Screen.Chat.createRoute(complaintId)) },
                     onNavigateToDetail = { complaintId -> 
                         if (complaintId == "profile") {
                             navController.navigate(Screen.Profile.route)

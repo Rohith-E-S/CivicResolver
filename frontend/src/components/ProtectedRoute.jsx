@@ -25,8 +25,11 @@ const ProtectedRoute = ({ children }) => {
 
   if (isAuthenticated === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="ui-page flex items-center justify-center p-6">
+        <div className="ui-card w-full max-w-sm text-center">
+          <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-[color:var(--ui-border)] border-t-[color:var(--ui-accent)]" />
+          <p className="text-sm text-[color:var(--ui-text-muted)]">Checking session...</p>
+        </div>
       </div>
     );
   }

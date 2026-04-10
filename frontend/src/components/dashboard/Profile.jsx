@@ -10,17 +10,18 @@ const Profile = ({
   user,
   setUser,
 }) => {
-  const handleChange = (e) =>
-    setProfileData({ ...profileData, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    setProfileData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
 
   const handleFile = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setProfileData({
-        ...profileData,
+      setProfileData((prev) => ({
+        ...prev,
         profilePic: file,
         previewUrl: URL.createObjectURL(file),
-      });
+      }));
     }
   };
 
@@ -31,107 +32,82 @@ const Profile = ({
     const data = new FormData();
     data.append("fullName", profileData.fullName);
     data.append("address", profileData.address);
-    if (profileData.profilePic)
-      data.append("profilePic", profileData.profilePic);
+    if (profileData.profilePic) data.append("profilePic", profileData.profilePic);
 
     try {
       const res = await API.post("/auth/update", data);
       if (res.data.success) {
-        setMessage({ type: "success", text: "Profile Updated!" });
+        setMessage({ type: "success", text: "Profile updated." });
         setUser(res.data.user);
         localStorage.setItem("userData", JSON.stringify(res.data.user));
       }
     } catch {
-      setMessage({ type: "error", text: "Update failed" });
+      setMessage({ type: "error", text: "Update failed." });
     } finally {
       setSubmitLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-slate-900 dark:text-white text-2xl font-bold mb-6">Edit Profile</h1>
+    <div className="ui-card max-w-3xl">
+      <h1 className="ui-title">Profile</h1>
+      <p className="ui-subtitle">Keep your personal information up to date.</p>
 
       {message.text && (
-        <div
-          className={`p-4 mb-6 rounded-lg border ${message.type === "success"
-            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900/30 text-green-700 dark:text-green-300"
-            : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/30 text-red-700 dark:text-red-300"
-            }`}
-        >
+        <div className={`mt-5 ui-alert ${message.type === "success" ? "ui-alert-success" : "ui-alert-error"}`}>
           {message.text}
         </div>
       )}
 
-      <form
-        onSubmit={updateProfile}
-        className="bg-white dark:bg-slate-800 p-8 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6 transition-colors"
-      >
-        <div className="flex flex-col items-center">
-          <div className="w-24 h-24 rounded-full overflow-hidden bg-blue-100 dark:bg-blue-900/50 border-4 border-white dark:border-slate-700 shadow-md flex items-center justify-center text-blue-700 dark:text-blue-300 text-3xl font-bold transition-all">
+      <form onSubmit={updateProfile} className="mt-4 space-y-3">
+        <div className="flex items-center gap-4">
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-[color:var(--ui-border)] bg-[color:var(--ui-surface-muted)] text-xl font-semibold">
             {profileData.previewUrl ? (
-              <img
-                src={profileData.previewUrl}
-                className="w-full h-full object-cover"
-                alt="Profile"
-              />
+              <img src={profileData.previewUrl} alt="Profile" className="h-full w-full object-cover" />
             ) : (
               user?.fullName?.charAt(0).toUpperCase()
             )}
           </div>
-
-          <label className="cursor-pointer mt-4 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 px-4 py-2 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm font-medium shadow-sm">
-            Change Photo
+          <label className="ui-btn ui-btn-secondary cursor-pointer">
+            Change photo
             <input type="file" className="hidden" onChange={handleFile} />
           </label>
         </div>
 
-        <Input
-          label="Full Name"
-          name="fullName"
-          value={profileData.fullName}
-          onChange={handleChange}
-          placeholder="Enter full name"
-        />
+        <div>
+          <label className="ui-label" htmlFor="fullName">
+            Full name
+          </label>
+          <input
+            id="fullName"
+            name="fullName"
+            value={profileData.fullName}
+            onChange={handleChange}
+            className="ui-input"
+            required
+          />
+        </div>
 
-        <TextArea
-          label="Address"
-          name="address"
-          value={profileData.address}
-          onChange={handleChange}
-          placeholder="Enter address"
-        />
+        <div>
+          <label className="ui-label" htmlFor="address">
+            Address
+          </label>
+          <textarea
+            id="address"
+            name="address"
+            value={profileData.address}
+            onChange={handleChange}
+            className="ui-textarea"
+            required
+          />
+        </div>
 
-        <button
-          disabled={submitLoading}
-          className="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-lg transition-colors shadow-sm disabled:opacity-50"
-        >
-          {submitLoading ? "Updating..." : "Update Profile"}
+        <button disabled={submitLoading} className="ui-btn ui-btn-primary">
+          {submitLoading ? "Updating..." : "Update profile"}
         </button>
       </form>
     </div>
   );
 };
-
-const Input = ({ label, ...props }) => (
-  <div>
-    <label className="block text-slate-700 dark:text-slate-300 mb-2 font-medium text-sm">{label}</label>
-    <input
-      {...props}
-      className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-    />
-  </div>
-);
-
-const TextArea = ({ label, ...props }) => (
-  <div>
-    <label className="block text-slate-700 dark:text-slate-300 mb-2 font-medium text-sm">{label}</label>
-    <textarea
-      {...props}
-      rows="3"
-      className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-    />
-  </div>
-);
 
 export default Profile;

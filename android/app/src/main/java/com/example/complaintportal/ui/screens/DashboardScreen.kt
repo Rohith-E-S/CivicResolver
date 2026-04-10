@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -31,12 +32,11 @@ fun DashboardScreen(
     isAdmin: Boolean,
     userName: String,
     onNavigateToCreate: () -> Unit,
-    onNavigateToChat: (String) -> Unit,
     onNavigateToDetail: (String) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("New", "In Progress", "Resolved")
+    var searchQuery by remember { mutableStateOf("") }
 
     val onRefresh = {
         if (isAdmin) {
@@ -59,7 +59,8 @@ fun DashboardScreen(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { onNavigateToDetail("profile") },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.Person, contentDescription = "Profile")
@@ -68,15 +69,17 @@ fun DashboardScreen(
             )
         },
         bottomBar = {
-            BottomNavBar(
-                currentRoute = "dashboard",
-                isAdmin = isAdmin,
-                onNavigate = { route ->
-                    if (route == "profile") {
-                        onNavigateToDetail("profile") // Using existing callback for now, we'll fix AppNavigation next
+            if (isAdmin) {
+                BottomNavBar(
+                    currentRoute = "dashboard",
+                    isAdmin = true,
+                    onNavigate = { route ->
+                        if (route == "profile") {
+                            onNavigateToDetail("profile")
+                        }
                     }
-                }
-            )
+                )
+            }
         },
         floatingActionButton = {
             if (!isAdmin) {
@@ -92,53 +95,74 @@ fun DashboardScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             
-            if (!isAdmin) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("Welcome back,", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(userName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (!isAdmin) {
+                    Column {
+                        Text("Welcome back,", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(userName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                    }
+                } else {
+                    Column {
+                        Text("Admin Console,", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Overview", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                    }
                 }
-            } else {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("Admin Console,", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Overview", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-                }
+
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .weight(1f),
+                    placeholder = { Text("Search...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    singleLine = true,
+                    shape = CircleShape,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                )
             }
 
-            // Stats
+            // Stats acting as Tabs
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 16.dp)
             ) {
                 item {
-                    StatCard("New", state.newComplaints.size.toString(), Icons.Default.AddAlert, MaterialTheme.colorScheme.primaryContainer)
+                    StatCard(
+                        title = "New",
+                        count = state.newComplaints.size.toString(),
+                        color = MaterialTheme.colorScheme.primary,
+                        isSelected = selectedTabIndex == 0,
+                        onClick = { selectedTabIndex = 0 }
+                    )
                 }
                 item {
-                    StatCard("Active", state.inProgressComplaints.size.toString(), Icons.Default.Pending, MaterialTheme.colorScheme.tertiaryContainer)
+                    StatCard(
+                        title = "Active",
+                        count = state.inProgressComplaints.size.toString(),
+                        color = MaterialTheme.colorScheme.tertiary,
+                        isSelected = selectedTabIndex == 1,
+                        onClick = { selectedTabIndex = 1 }
+                    )
                 }
                 item {
-                    StatCard("Resolved", state.resolvedComplaints.size.toString(), Icons.Default.CheckCircle, MaterialTheme.colorScheme.secondaryContainer)
-                }
-            }
-
-            // Tabs
-            Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                tabs.forEachIndexed { index, title ->
-                    val isSelected = selectedTabIndex == index
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(100))
-                            .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { selectedTabIndex = index }
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            title,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold,
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    }
+                    StatCard(
+                        title = "Resolved",
+                        count = state.resolvedComplaints.size.toString(),
+                        color = MaterialTheme.colorScheme.secondary,
+                        isSelected = selectedTabIndex == 2,
+                        onClick = { selectedTabIndex = 2 }
+                    )
                 }
             }
 
@@ -154,7 +178,17 @@ fun DashboardScreen(
                     else -> emptyList()
                 }
 
-                if (list.isEmpty() && !state.isLoading) {
+                val filteredList = if (searchQuery.isBlank()) {
+                    list
+                } else {
+                    list.filter {
+                        it.category.contains(searchQuery, ignoreCase = true) ||
+                        it.city.contains(searchQuery, ignoreCase = true) ||
+                        it.description.contains(searchQuery, ignoreCase = true)
+                    }
+                }
+
+                if (filteredList.isEmpty() && !state.isLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("No complaints found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -164,12 +198,12 @@ fun DashboardScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(list) { complaint ->
+                        items(filteredList) { complaint ->
                             ComplaintCard(
                                 complaint = complaint,
                                 isAdmin = isAdmin,
-                                onClick = { onNavigateToDetail(complaint.id ?: "") },
-                                onUpdateStatusClick = { onNavigateToDetail(complaint.id ?: "") }
+                                onClick = { onNavigateToDetail(complaint.id) },
+                                onUpdateStatusClick = { onNavigateToDetail(complaint.id) }
                             )
                         }
                     }
@@ -180,26 +214,28 @@ fun DashboardScreen(
 }
 
 @Composable
-fun StatCard(title: String, count: String, icon: androidx.compose.ui.graphics.vector.ImageVector, bgColor: Color) {
-    Box(
+fun StatCard(
+    title: String,
+    count: String,
+    color: Color,
+    isSelected: Boolean = false,
+    onClick: () -> Unit = {}
+) {
+    val borderColor = if (isSelected) color else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+    val backgroundColor = if (isSelected) color.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
+
+    Row(
         modifier = Modifier
-            .width(115.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f), RoundedCornerShape(16.dp))
-            .padding(12.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(backgroundColor)
+            .border(if (isSelected) 2.dp else 1.dp, borderColor, RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Column {
-            Box(
-                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(bgColor.copy(alpha=0.1f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, contentDescription = null, tint = bgColor, modifier = Modifier.size(16.dp))
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(count, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
-        }
+        Text(title, style = MaterialTheme.typography.labelMedium, color = if (isSelected) color else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+        Text(count, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (isSelected) color else MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -263,7 +299,7 @@ fun ComplaintCard(complaint: Complaint, isAdmin: Boolean, onClick: () -> Unit, o
             } else {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("View Details", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Icon(Icons.Default.ArrowForwardIos, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                 }
             }
         }

@@ -18,7 +18,7 @@ const MapLeaflet = ({ lat, lng }) => {
   if (!latitude || !longitude) return null;
 
   return (
-    <div className="w-full h-72 rounded-xl overflow-hidden border border-white/10">
+    <div className="h-72 w-full overflow-hidden rounded-xl border border-[color:var(--ui-border)]">
       <MapContainer
         center={[latitude, longitude]}
         zoom={15}

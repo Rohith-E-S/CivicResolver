@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import API from "../api/axios";
 import socket, { connectSocket, disconnectSocket } from "../utils/socket";
 import ChatBox from "../components/ChatBox";
+import AppHeader from "../components/AppHeader";
 
 const ComplaintChat = () => {
   const { complaintId } = useParams();
@@ -12,13 +13,10 @@ const ComplaintChat = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch complaint and current user info
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const complaintRes = await API.get(
-          `/complaint/get-complaint-data/${complaintId}`
-        );
+        const complaintRes = await API.get(`/complaint/get-complaint-data/${complaintId}`);
         setComplaint(complaintRes.data.complaint);
 
         const userRes = await API.get("/auth/check-auth");
@@ -37,9 +35,8 @@ const ComplaintChat = () => {
     fetchData();
   }, [complaintId]);
 
-  // Setup socket connection
   useEffect(() => {
-    if (!currentUser || !complaintId) return;
+    if (!currentUser || !complaintId) return undefined;
 
     connectSocket();
     socket.emit("joinComplaint", complaintId);
@@ -69,79 +66,55 @@ const ComplaintChat = () => {
 
   const handleSendMessage = (message) => {
     if (!complaint || !currentUser) return;
-
-    const toUser = currentUser.isAdmin
-      ? complaint.user._id
-      : complaint.user._id;
-
-    socket.emit("sendMessage", {
-      complaintId,
-      toUser,
-      message,
-    });
+    const toUser = complaint.user._id;
+    socket.emit("sendMessage", { complaintId, toUser, message });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-on-surface-variant">Loading chat...</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="ui-page ui-empty">Loading chat...</div>;
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-error mb-4">{error}</p>
-          <Link
-            to="/dashboard"
-            className="text-surface-tint hover:underline"
-          >
-            ← Back to Dashboard
-          </Link>
-        </div>
+      <div className="ui-page ui-empty">
+        <p>{error}</p>
+        <Link to="/dashboard" className="text-[color:var(--ui-accent)] hover:underline">
+          Back to dashboard
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-on-background flex flex-col font-sans">
-      {/* TopNavBar */}
-      <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-sm dark:shadow-none">
-        <div className="flex justify-between items-center w-full px-6 py-3 max-w-full">
-          <div className="flex items-center gap-8">
-            <span className="text-lg font-bold tracking-tighter text-slate-900 dark:text-slate-50">Editorial Governance</span>
-            <div className="hidden md:flex gap-6 items-center">
-              <Link to={currentUser?.isAdmin ? "/admin-dashboard" : "/dashboard"} className="font-sans text-sm tracking-tight font-medium text-blue-700 dark:text-blue-400 font-semibold hover:underline">
-                ← Back to Dashboard
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="ui-page">
+      <AppHeader
+        brandTo={currentUser?.isAdmin ? "/admin-dashboard" : "/dashboard"}
+        brandInitial="C"
+        brandLabel="Complaint Register Portal"
+        title="Complaint chat"
+        subtitle={`ID #${complaintId.slice(-8).toUpperCase()}`}
+        actions={
+          <>
+            <Link
+              to={currentUser?.isAdmin ? "/admin-dashboard" : "/dashboard"}
+              className="ui-btn ui-btn-secondary"
+            >
+              Dashboard
+            </Link>
+            <Link
+              to={
+                currentUser?.isAdmin
+                  ? `/admin/complaint-overview/${complaintId}`
+                  : `/complaint-overview/${complaintId}`
+              }
+              className="ui-btn ui-btn-primary"
+            >
+              Details
+            </Link>
+          </>
+        }
+      />
 
-      <main className="flex-1 pt-24 pb-12 px-6 max-w-5xl w-full mx-auto flex flex-col h-screen">
-        {/* Header */}
-        <div className="mb-6 flex justify-between items-end">
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">
-              Resolution Channel
-            </h1>
-            <p className="text-lg text-slate-500 max-w-2xl font-light leading-relaxed">
-              Ticket #{complaintId.slice(-8).toUpperCase()}
-            </p>
-          </div>
-          <Link
-            to={currentUser?.isAdmin ? `/admin/complaint-overview/${complaintId}` : `/complaint-overview/${complaintId}`}
-            className="px-6 py-2 bg-surface-container-low hover:bg-surface-container-high rounded-full font-bold text-xs uppercase tracking-widest transition-colors shadow-sm text-on-surface"
-          >
-            View Issue Details
-          </Link>
-        </div>
-
-        {/* Chat Box Container */}
-        <div className="flex-1 min-h-0">
+      <main className="ui-container py-6">
+        <div className="h-[calc(100vh-10rem)] min-h-[480px]">
           <ChatBox
             messages={messages}
             onSendMessage={handleSendMessage}

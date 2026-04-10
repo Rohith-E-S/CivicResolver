@@ -13,11 +13,13 @@ import OtpVerify from "./pages/OtpVerify";
 import ComplaintChat from "./pages/ComplaintChat";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import ThemeToggle from "./components/ThemeToggle";
 
 function App() {
   return (
     <Router>
       <ThemeProvider>
+        <ThemeToggle className="fixed bottom-3 right-3 z-[80]" />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/signup" element={<Signup />} />
