@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.security.crypto)
     implementation(libs.google.play.services.auth)
+    implementation(libs.google.play.services.location)
     
     // Third party
     implementation(libs.retrofit)
@@ -64,6 +65,7 @@ dependencies {
     implementation(libs.socket.io.client)
     implementation(libs.moshi)
     implementation(libs.moshi.kotlin)
+    implementation(libs.play.services.location)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

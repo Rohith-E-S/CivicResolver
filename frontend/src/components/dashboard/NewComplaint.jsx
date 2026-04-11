@@ -62,6 +62,10 @@ const NewComplaint = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.latitude || !formData.longitude) {
+      setMessage({ type: "error", text: "Please fetch your location before submitting." });
+      return;
+    }
     setSubmitLoading(true);
     setMessage({ type: "", text: "" });
 
@@ -127,47 +131,6 @@ const NewComplaint = ({
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div>
-            <label className="ui-label" htmlFor="city">
-              City
-            </label>
-            <input
-              id="city"
-              name="city"
-              value={formData.city}
-              onChange={handleChange}
-              className="ui-input"
-              required
-            />
-          </div>
-          <div>
-            <label className="ui-label" htmlFor="state">
-              State
-            </label>
-            <input
-              id="state"
-              name="state"
-              value={formData.state}
-              onChange={handleChange}
-              className="ui-input"
-              required
-            />
-          </div>
-          <div>
-            <label className="ui-label" htmlFor="landmark">
-              Landmark
-            </label>
-            <input
-              id="landmark"
-              name="landmark"
-              value={formData.landmark}
-              onChange={handleChange}
-              className="ui-input"
-            />
-          </div>
-        </div>
-
         <div className="ui-card-muted">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-[color:var(--ui-text-muted)]">Location helps route your complaint.</p>
@@ -176,9 +139,16 @@ const NewComplaint = ({
             </button>
           </div>
           {formData.latitude && formData.longitude && (
-            <p className="mt-2 text-sm text-[color:var(--ui-text-muted)]">
-              Coordinates: {formData.latitude}, {formData.longitude}
-            </p>
+            <div className="mt-3 space-y-1">
+              <p className="text-sm text-[color:var(--ui-text-muted)]">
+                Coordinates: {formData.latitude}, {formData.longitude}
+              </p>
+              {(formData.city || formData.state || formData.landmark) && (
+                <p className="text-sm text-[color:var(--ui-text-muted)]">
+                  Address: {[formData.landmark, formData.city, formData.state].filter(Boolean).join(", ")}
+                </p>
+              )}
+            </div>
           )}
         </div>
 

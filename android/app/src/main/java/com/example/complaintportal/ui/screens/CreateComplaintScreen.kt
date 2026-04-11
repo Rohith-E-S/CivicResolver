@@ -1,5 +1,8 @@
 package com.example.complaintportal.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.location.Geocoder
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,15 +27,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import coil.compose.rememberAsyncImagePainter
 import com.example.complaintportal.ui.viewmodel.ComplaintViewModel
+import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Locale
 import java.util.Objects
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,15 +51,100 @@ fun CreateComplaintScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var description by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("Sanitation & Waste") }
     var city by remember { mutableStateOf("") }
     var userState by remember { mutableStateOf("") }
     var landmark by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var showCategoryDropdown by remember { mutableStateOf(false) }
-    val categories = listOf("Sanitation & Waste", "Roads & Infrastructure", "Public Safety", "Utilities & Lighting", "Parks & Recreation")
+    var lat by remember { mutableStateOf("0.0") }
+    var lng by remember { mutableStateOf("0.0") }
+    var locationMessage by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
 
     val context = LocalContext.current
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true || permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
+            try {
+                locationMessage = "Fetching location..."
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    if (location != null) {
+                        lat = location.latitude.toString()
+                        lng = location.longitude.toString()
+                        locationMessage = "Location fetched."
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                val geocoder = Geocoder(context, Locale.getDefault())
+                                @Suppress("DEPRECATION")
+                                val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
+                                if (!addresses.isNullOrEmpty()) {
+                                    val address = addresses[0]
+                                    city = address.locality ?: address.subAdminArea ?: address.adminArea ?: ""
+                                    userState = address.adminArea ?: ""
+                                    locationMessage = "Location & city/state fetched."
+                                } else {
+                                    locationMessage = "Coordinates fetched. Add city/state manually."
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                locationMessage = "Coordinates fetched. Add city/state manually."
+                            }
+                        }
+                    } else {
+                        locationMessage = "Unable to fetch location. Turn on GPS."
+                    }
+                }
+            } catch (e: SecurityException) {
+                locationMessage = "Location permission denied"
+            }
+        } else {
+            locationMessage = "Location permission denied"
+        }
+    }
+
+    val getLocation = {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            
+            locationMessage = "Fetching location..."
+            try {
+                fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                    if (location != null) {
+                        lat = location.latitude.toString()
+                        lng = location.longitude.toString()
+                        locationMessage = "Location fetched."
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                val geocoder = Geocoder(context, Locale.getDefault())
+                                @Suppress("DEPRECATION")
+                                val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
+                                if (!addresses.isNullOrEmpty()) {
+                                    val address = addresses[0]
+                                    city = address.locality ?: address.subAdminArea ?: address.adminArea ?: ""
+                                    userState = address.adminArea ?: ""
+                                    locationMessage = "Location & city/state fetched."
+                                } else {
+                                    locationMessage = "Coordinates fetched. Add city/state manually."
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                locationMessage = "Coordinates fetched. Add city/state manually."
+                            }
+                        }
+                    } else {
+                        locationMessage = "Unable to fetch location. Turn on GPS."
+                    }
+                }
+            } catch (e: SecurityException) {
+                locationMessage = "Location permission denied"
+            }
+        } else {
+            locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+        }
+    }
+
     val cameraFile = remember { File(context.cacheDir, "camera_photo.jpg") }
     val cameraUri = remember {
         try {
@@ -98,8 +191,8 @@ fun CreateComplaintScreen(
                         }
 
                         val descReq = description.toRequestBody("text/plain".toMediaTypeOrNull())
-                        val latReq = "0.0".toRequestBody("text/plain".toMediaTypeOrNull())
-                        val lngReq = "0.0".toRequestBody("text/plain".toMediaTypeOrNull())
+                        val latReq = lat.toRequestBody("text/plain".toMediaTypeOrNull())
+                        val lngReq = lng.toRequestBody("text/plain".toMediaTypeOrNull())
                         val cityReq = city.toRequestBody("text/plain".toMediaTypeOrNull())
                         val stateReq = userState.toRequestBody("text/plain".toMediaTypeOrNull())
                         val landmarkReq = landmark.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -108,7 +201,7 @@ fun CreateComplaintScreen(
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    enabled = !state.isLoading && description.isNotBlank() && city.isNotBlank() && userState.isNotBlank()
+                    enabled = !state.isLoading && description.isNotBlank() && lat != "0.0" && lng != "0.0"
                 ) {
                     Text(if (state.isLoading) "Submitting..." else "Submit Complaint", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 }
@@ -128,32 +221,6 @@ fun CreateComplaintScreen(
             Text("Submit an issue to your local administration for resolution.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp))
             
             Spacer(modifier = Modifier.height(32.dp))
-
-            // Category
-            Text("CATEGORY", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
-            Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = {},
-                    readOnly = true,
-                    modifier = Modifier.fillMaxWidth().clickable { showCategoryDropdown = true },
-                    trailingIcon = { Icon(Icons.Default.ExpandMore, contentDescription = null) },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha=0.4f)
-                    )
-                )
-                DropdownMenu(expanded = showCategoryDropdown, onDismissRequest = { showCategoryDropdown = false }) {
-                    categories.forEach { cat ->
-                        DropdownMenuItem(text = { Text(cat) }, onClick = { category = cat; showCategoryDropdown = false })
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
 
             // Description
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
@@ -179,23 +246,34 @@ fun CreateComplaintScreen(
 
             // Location
             Text("LOCATION DETAILS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(value = city, onValueChange = { city = it }, placeholder = { Text("City") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow, unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow, unfocusedBorderColor = Color.Transparent))
-                OutlinedTextField(value = userState, onValueChange = { userState = it }, placeholder = { Text("State") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow, unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow, unfocusedBorderColor = Color.Transparent))
+
+            Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(16.dp)) {
+                Column {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Location helps route your complaint.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = { getLocation() },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
+                        ) {
+                            Text("Use current location", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        }
+                    }
+                    if (locationMessage.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(locationMessage, style = MaterialTheme.typography.labelSmall, color = if (locationMessage.contains("fetched")) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error)
+                    }
+                    if (lat != "0.0" && lng != "0.0") {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Coordinates: $lat, $lng", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (city.isNotEmpty() || userState.isNotEmpty() || landmark.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            val addressString = listOf(landmark, city, userState).filter { it.isNotBlank() }.joinToString(", ")
+                            Text("Address: $addressString", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
             }
-            OutlinedTextField(
-                value = landmark,
-                onValueChange = { landmark = it },
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                placeholder = { Text("Landmark or Street Address") },
-                leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    unfocusedBorderColor = Color.Transparent
-                )
-            )
 
             Spacer(modifier = Modifier.height(24.dp))
 

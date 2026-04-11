@@ -147,7 +147,7 @@ fun MessageItem(message: Message, isMine: Boolean) {
     val alignment = if (isMine) Alignment.CenterEnd else Alignment.CenterStart
     val bgColor = if (isMine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
     val textColor = if (isMine) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-    val shape = if (isMine) RoundedCornerShape(16.dp, 16.dp, 0.dp, 16.dp) else RoundedCornerShape(16.dp, 16.dp, 16.dp, 0.dp)
+    val shape = if (isMine) RoundedCornerShape(24.dp, 24.dp, 4.dp, 24.dp) else RoundedCornerShape(24.dp, 24.dp, 24.dp, 4.dp)
 
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = alignment) {
         Row(
@@ -166,7 +166,7 @@ fun MessageItem(message: Message, isMine: Boolean) {
                     modifier = Modifier
                         .clip(shape)
                         .background(bgColor)
-                        .padding(16.dp)
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
                 ) {
                     Text(text = message.message ?: "", color = textColor, style = MaterialTheme.typography.bodyMedium)
                 }

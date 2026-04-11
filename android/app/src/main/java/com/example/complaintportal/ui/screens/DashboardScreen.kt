@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
 import com.example.complaintportal.data.model.Complaint
 import com.example.complaintportal.ui.viewmodel.ComplaintViewModel
 
@@ -114,56 +116,41 @@ fun DashboardScreen(
                     }
                 }
 
-                OutlinedTextField(
+                BasicTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier
-                        .weight(1f),
-                    placeholder = { Text("Search...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                        .weight(1f)
+                        .height(48.dp)
+                        .background(MaterialTheme.colorScheme.surface, CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), CircleShape),
                     singleLine = true,
-                    shape = CircleShape,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    decorationBox = { innerTextField ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (searchQuery.isEmpty()) {
+                                    Text(
+                                        text = "Search...",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        }
+                    }
                 )
-            }
-
-            // Stats acting as Tabs
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(bottom = 16.dp)
-            ) {
-                item {
-                    StatCard(
-                        title = "New",
-                        count = state.newComplaints.size.toString(),
-                        color = MaterialTheme.colorScheme.primary,
-                        isSelected = selectedTabIndex == 0,
-                        onClick = { selectedTabIndex = 0 }
-                    )
-                }
-                item {
-                    StatCard(
-                        title = "Active",
-                        count = state.inProgressComplaints.size.toString(),
-                        color = MaterialTheme.colorScheme.tertiary,
-                        isSelected = selectedTabIndex == 1,
-                        onClick = { selectedTabIndex = 1 }
-                    )
-                }
-                item {
-                    StatCard(
-                        title = "Resolved",
-                        count = state.resolvedComplaints.size.toString(),
-                        color = MaterialTheme.colorScheme.secondary,
-                        isSelected = selectedTabIndex == 2,
-                        onClick = { selectedTabIndex = 2 }
-                    )
-                }
             }
 
             PullToRefreshBox(
@@ -188,23 +175,64 @@ fun DashboardScreen(
                     }
                 }
 
-                if (filteredList.isEmpty() && !state.isLoading) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No complaints found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        // Stats acting as Tabs
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        ) {
+                            item {
+                                StatCard(
+                                    title = "New",
+                                    count = state.newComplaints.size.toString(),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    isSelected = selectedTabIndex == 0,
+                                    onClick = { selectedTabIndex = 0 }
+                                )
+                            }
+                            item {
+                                StatCard(
+                                    title = "Active",
+                                    count = state.inProgressComplaints.size.toString(),
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    isSelected = selectedTabIndex == 1,
+                                    onClick = { selectedTabIndex = 1 }
+                                )
+                            }
+                            item {
+                                StatCard(
+                                    title = "Resolved",
+                                    count = state.resolvedComplaints.size.toString(),
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    isSelected = selectedTabIndex == 2,
+                                    onClick = { selectedTabIndex = 2 }
+                                )
+                            }
+                        }
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+
+                    if (filteredList.isEmpty() && !state.isLoading) {
+                        item {
+                            Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("No complaints found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    } else {
                         items(filteredList) { complaint ->
-                            ComplaintCard(
-                                complaint = complaint,
-                                isAdmin = isAdmin,
-                                onClick = { onNavigateToDetail(complaint.id) },
-                                onUpdateStatusClick = { onNavigateToDetail(complaint.id) }
-                            )
+                            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                ComplaintCard(
+                                    complaint = complaint,
+                                    isAdmin = isAdmin,
+                                    onClick = { onNavigateToDetail(complaint.id) },
+                                    onUpdateStatusClick = { onNavigateToDetail(complaint.id) }
+                                )
+                            }
                         }
                     }
                 }
@@ -283,6 +311,22 @@ fun ComplaintCard(complaint: Complaint, isAdmin: Boolean, onClick: () -> Unit, o
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(complaint.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = "Location",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "${complaint.city}, ${complaint.state}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
             
