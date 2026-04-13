@@ -1,5 +1,6 @@
-package com.example.complaintportal.ui.screens
+package com.example.complaintportal.ui.screens.admin
 
+import com.example.complaintportal.ui.screens.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,10 +25,8 @@ import com.example.complaintportal.ui.viewmodel.ComplaintViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserDashboardScreen(
+fun AdminDashboardScreen(
     viewModel: ComplaintViewModel,
-    userName: String,
-    onNavigateToCreate: () -> Unit,
     onNavigateToDetail: (String) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
@@ -37,7 +36,7 @@ fun UserDashboardScreen(
 
     val onRefresh = {
         isRefreshing = true
-        viewModel.fetchUserComplaints()
+        viewModel.fetchAdminComplaints()
     }
 
     LaunchedEffect(state.isLoading) {
@@ -47,13 +46,13 @@ fun UserDashboardScreen(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.fetchUserComplaints()
+        viewModel.fetchAdminComplaints()
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("CivicResolve", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primaryContainer) },
+                title = { Text("CivicResolve Admin", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primaryContainer) },
                 actions = {
                     Box(
                         modifier = Modifier
@@ -68,14 +67,16 @@ fun UserDashboardScreen(
                 }
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToCreate,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Create Complaint")
-            }
+        bottomBar = {
+            BottomNavBar(
+                currentRoute = "dashboard",
+                isAdmin = true,
+                onNavigate = { route ->
+                    if (route == "profile") {
+                        onNavigateToDetail("profile")
+                    }
+                }
+            )
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -88,8 +89,8 @@ fun UserDashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Welcome back,", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(userName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+                    Text("Admin Console,", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Overview", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
                 }
 
                 BasicTextField(
@@ -164,7 +165,7 @@ fun UserDashboardScreen(
                         ) {
                             item {
                                 StatCard(
-                                    title = "New",
+                                    title = "New Actions",
                                     count = state.newComplaints.size.toString(),
                                     color = MaterialTheme.colorScheme.primary,
                                     isSelected = selectedTabIndex == 0,
@@ -173,7 +174,7 @@ fun UserDashboardScreen(
                             }
                             item {
                                 StatCard(
-                                    title = "Active",
+                                    title = "Active Processing",
                                     count = state.inProgressComplaints.size.toString(),
                                     color = MaterialTheme.colorScheme.tertiary,
                                     isSelected = selectedTabIndex == 1,
@@ -182,7 +183,7 @@ fun UserDashboardScreen(
                             }
                             item {
                                 StatCard(
-                                    title = "Resolved",
+                                    title = "Resolved By Team",
                                     count = state.resolvedComplaints.size.toString(),
                                     color = MaterialTheme.colorScheme.secondary,
                                     isSelected = selectedTabIndex == 2,
@@ -195,7 +196,7 @@ fun UserDashboardScreen(
                     if (filteredList.isEmpty() && !state.isLoading) {
                         item {
                             Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("No complaints found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("No pending issues found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     } else {
@@ -203,9 +204,9 @@ fun UserDashboardScreen(
                             Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                                 ComplaintCard(
                                     complaint = complaint,
-                                    isAdmin = false,
+                                    isAdmin = true,
                                     onClick = { onNavigateToDetail(complaint.id) },
-                                    onUpdateStatusClick = {}
+                                    onUpdateStatusClick = { onNavigateToDetail(complaint.id) }
                                 )
                             }
                         }

@@ -18,6 +18,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.complaintportal.di.AppContainer
 import com.example.complaintportal.ui.screens.*
+import com.example.complaintportal.ui.screens.admin.*
+import com.example.complaintportal.ui.screens.user.*
 import com.example.complaintportal.ui.viewmodel.*
 
 sealed class Screen(val route: String) {
@@ -141,12 +143,21 @@ fun AppNavigation(
                 arguments = listOf(navArgument("complaintId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val complaintId = backStackEntry.arguments?.getString("complaintId") ?: ""
-                ComplaintDetailScreen(
-                    viewModel = complaintViewModel,
-                    complaintId = complaintId,
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateToChat = { id -> navController.navigate(Screen.Chat.createRoute(id)) }
-                )
+                if (authState.user?.isAdmin == true) {
+                    AdminComplaintDetailScreen(
+                        viewModel = complaintViewModel,
+                        complaintId = complaintId,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToChat = { id -> navController.navigate(Screen.Chat.createRoute(id)) }
+                    )
+                } else {
+                    UserComplaintDetailScreen(
+                        viewModel = complaintViewModel,
+                        complaintId = complaintId,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToChat = { id -> navController.navigate(Screen.Chat.createRoute(id)) }
+                    )
+                }
             }
 
             composable(

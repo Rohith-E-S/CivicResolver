@@ -1,5 +1,6 @@
-package com.example.complaintportal.ui.screens
+package com.example.complaintportal.ui.screens.user
 
+import com.example.complaintportal.ui.screens.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,7 +28,7 @@ import com.example.complaintportal.ui.viewmodel.ComplaintViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ComplaintDetailScreen(
+fun UserComplaintDetailScreen(
     viewModel: ComplaintViewModel,
     complaintId: String,
     onNavigateBack: () -> Unit,
