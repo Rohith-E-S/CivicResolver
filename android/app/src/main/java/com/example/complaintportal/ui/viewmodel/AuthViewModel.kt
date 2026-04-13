@@ -144,6 +144,37 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
             _authState.value = AuthState(isChecking = false)
         }
     }
+
+    fun updateProfile(
+        fullName: okhttp3.RequestBody?,
+        address: okhttp3.RequestBody?,
+        profilePic: okhttp3.MultipartBody.Part?,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            _authState.value = _authState.value.copy(isLoading = true, error = null)
+            val result = repository.updateProfile(fullName, address, profilePic)
+            result.onSuccess { response ->
+                if (response.success && response.user != null) {
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        user = response.user
+                    )
+                    onSuccess()
+                } else {
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        error = response.message ?: "Profile update failed"
+                    )
+                }
+            }.onFailure { e ->
+                _authState.value = _authState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Profile update failed"
+                )
+            }
+        }
+    }
 }
 
 class AuthViewModelFactory(private val repository: AuthRepository) : ViewModelProvider.Factory {

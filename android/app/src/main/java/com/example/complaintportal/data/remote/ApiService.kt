@@ -29,6 +29,14 @@ interface ApiService {
     @GET("auth/check-auth")
     suspend fun checkAuth(): Response<AuthResponse>
 
+    @Multipart
+    @POST("auth/update")
+    suspend fun updateProfile(
+        @Part("fullName") fullName: RequestBody?,
+        @Part("address") address: RequestBody?,
+        @Part profilePic: MultipartBody.Part?
+    ): Response<AuthResponse>
+
     // ---- Complaint APIs ----
     @Multipart
     @POST("complaint/create-complaint")

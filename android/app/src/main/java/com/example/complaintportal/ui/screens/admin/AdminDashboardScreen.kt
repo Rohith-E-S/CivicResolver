@@ -165,7 +165,7 @@ fun AdminDashboardScreen(
                         ) {
                             item {
                                 StatCard(
-                                    title = "New Actions",
+                                    title = "New",
                                     count = state.newComplaints.size.toString(),
                                     color = MaterialTheme.colorScheme.primary,
                                     isSelected = selectedTabIndex == 0,
@@ -174,7 +174,7 @@ fun AdminDashboardScreen(
                             }
                             item {
                                 StatCard(
-                                    title = "Active Processing",
+                                    title = "Active",
                                     count = state.inProgressComplaints.size.toString(),
                                     color = MaterialTheme.colorScheme.tertiary,
                                     isSelected = selectedTabIndex == 1,
@@ -183,7 +183,7 @@ fun AdminDashboardScreen(
                             }
                             item {
                                 StatCard(
-                                    title = "Resolved By Team",
+                                    title = "Resolved",
                                     count = state.resolvedComplaints.size.toString(),
                                     color = MaterialTheme.colorScheme.secondary,
                                     isSelected = selectedTabIndex == 2,

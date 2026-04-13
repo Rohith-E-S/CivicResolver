@@ -114,4 +114,22 @@ class AuthRepository(private val apiService: ApiService) {
             Result.failure(e)
         }
     }
+
+    suspend fun updateProfile(
+        fullName: okhttp3.RequestBody?,
+        address: okhttp3.RequestBody?,
+        profilePic: okhttp3.MultipartBody.Part?
+    ): Result<AuthResponse> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.updateProfile(fullName, address, profilePic)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                val errorMsg = parseError(response.errorBody()?.string())
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

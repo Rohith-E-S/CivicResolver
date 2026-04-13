@@ -36,12 +36,49 @@ fun AdminComplaintDetailScreen(
     onNavigateToChat: (String) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
+    var showStatusDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(complaintId) {
         viewModel.fetchComplaint(complaintId)
     }
 
     val complaint = state.currentComplaint
+
+    if (showStatusDialog && complaint != null) {
+        AlertDialog(
+            onDismissRequest = { showStatusDialog = false },
+            title = { Text("Update Status", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    val statuses = listOf("new", "in progress", "resolved")
+                    statuses.forEach { status ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    viewModel.updateComplaintStatus(complaintId, status) {
+                                        showStatusDialog = false
+                                        viewModel.fetchComplaint(complaintId) // Refresh the detail screen data
+                                        viewModel.fetchAdminComplaints() // Also keep the main list fresh
+                                    }
+                                }
+                                .background(if (complaint.status == status) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(status.uppercase(), fontWeight = if (complaint.status == status) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showStatusDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -158,7 +195,7 @@ fun AdminComplaintDetailScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Button(
-                                onClick = { /* TODO: Handle Update Status */ },
+                                onClick = { showStatusDialog = true },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp)
                             ) {

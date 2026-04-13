@@ -1,5 +1,9 @@
 package com.example.complaintportal.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,15 +13,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.rememberAsyncImagePainter
 import com.example.complaintportal.ui.viewmodel.AuthViewModel
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
+import java.io.FileOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,6 +39,26 @@ fun ProfileScreen(
 ) {
     val state by viewModel.authState.collectAsState()
     val user = state.user
+    val context = LocalContext.current
+
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            val inputStream = context.contentResolver.openInputStream(it)
+            val uploadFile = File(context.cacheDir, "profile_${System.currentTimeMillis()}.jpg")
+            val outputStream = FileOutputStream(uploadFile)
+            inputStream?.copyTo(outputStream)
+            inputStream?.close()
+            outputStream.close()
+            
+            val requestFile = uploadFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+            val imagePart = MultipartBody.Part.createFormData("profilePic", uploadFile.name, requestFile)
+            
+            val fullNameReq = user?.fullName?.toRequestBody("text/plain".toMediaTypeOrNull())
+            val addressReq = user?.address?.toRequestBody("text/plain".toMediaTypeOrNull())
+
+            viewModel.updateProfile(fullNameReq, addressReq, imagePart) {}
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -55,10 +87,27 @@ fun ProfileScreen(
                 modifier = Modifier
                     .size(128.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable(enabled = !state.isLoading) { galleryLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline)
+                if (!user?.profilePic.isNullOrEmpty()) {
+                    Image(
+                        painter = rememberAsyncImagePainter(user?.profilePic),
+                        contentDescription = "Profile Picture",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline)
+                }
+                
+                if (state.isLoading) {
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha=0.3f)), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    }
+                }
+
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)

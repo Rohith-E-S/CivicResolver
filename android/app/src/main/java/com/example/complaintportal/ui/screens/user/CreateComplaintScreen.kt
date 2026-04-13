@@ -1,5 +1,6 @@
-package com.example.complaintportal.ui.screens
+package com.example.complaintportal.ui.screens.user
 
+import com.example.complaintportal.ui.screens.*
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Geocoder

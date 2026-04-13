@@ -113,6 +113,23 @@ class ComplaintViewModel(private val repository: ComplaintRepository) : ViewMode
             }
         }
     }
+
+    fun updateComplaintStatus(id: String, status: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            val result = repository.updateComplaintStatus(id, status)
+            result.onSuccess { response ->
+                if (response.success) {
+                    _state.value = _state.value.copy(isLoading = false, currentComplaint = response.complaint)
+                    onSuccess()
+                } else {
+                    _state.value = _state.value.copy(isLoading = false, error = response.message)
+                }
+            }.onFailure {
+                _state.value = _state.value.copy(isLoading = false, error = it.message)
+            }
+        }
+    }
 }
 
 class ComplaintViewModelFactory(private val repository: ComplaintRepository) : ViewModelProvider.Factory {
