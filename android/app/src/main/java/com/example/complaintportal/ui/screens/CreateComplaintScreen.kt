@@ -47,7 +47,8 @@ import java.util.Objects
 @Composable
 fun CreateComplaintScreen(
     viewModel: ComplaintViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onSuccess: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     var description by remember { mutableStateOf("") }
@@ -83,13 +84,17 @@ fun CreateComplaintScreen(
                                     val address = addresses[0]
                                     city = address.locality ?: address.subAdminArea ?: address.adminArea ?: ""
                                     userState = address.adminArea ?: ""
+                                    val extractedLandmark = address.featureName ?: address.thoroughfare ?: address.subLocality ?: ""
+                                    if (extractedLandmark != city && extractedLandmark != userState) {
+                                        landmark = extractedLandmark
+                                    }
                                     locationMessage = "Location & city/state fetched."
                                 } else {
-                                    locationMessage = "Coordinates fetched. Add city/state manually."
+                                    locationMessage = "Coordinates fetched. Add details manually."
                                 }
                             } catch (e: Exception) {
                                 e.printStackTrace()
-                                locationMessage = "Coordinates fetched. Add city/state manually."
+                                locationMessage = "Coordinates fetched. Add details manually."
                             }
                         }
                     } else {
@@ -124,13 +129,17 @@ fun CreateComplaintScreen(
                                     val address = addresses[0]
                                     city = address.locality ?: address.subAdminArea ?: address.adminArea ?: ""
                                     userState = address.adminArea ?: ""
+                                    val extractedLandmark = address.featureName ?: address.thoroughfare ?: address.subLocality ?: ""
+                                    if (extractedLandmark != city && extractedLandmark != userState) {
+                                        landmark = extractedLandmark
+                                    }
                                     locationMessage = "Location & city/state fetched."
                                 } else {
-                                    locationMessage = "Coordinates fetched. Add city/state manually."
+                                    locationMessage = "Coordinates fetched. Add details manually."
                                 }
                             } catch (e: Exception) {
                                 e.printStackTrace()
-                                locationMessage = "Coordinates fetched. Add city/state manually."
+                                locationMessage = "Coordinates fetched. Add details manually."
                             }
                         }
                     } else {
@@ -145,21 +154,28 @@ fun CreateComplaintScreen(
         }
     }
 
-    val cameraFile = remember { File(context.cacheDir, "camera_photo.jpg") }
-    val cameraUri = remember {
-        try {
-            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", cameraFile)
-        } catch (e: Exception) {
-            Uri.EMPTY
-        }
-    }
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
 
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { resultUri ->
         if (resultUri != null) selectedImageUri = resultUri
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        if (success) selectedImageUri = cameraUri
+        if (success) selectedImageUri = tempCameraUri
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) {
+            try {
+                val file = File(context.cacheDir, "camera_photo_${System.currentTimeMillis()}.jpg")
+                if (!file.exists()) file.createNewFile()
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                tempCameraUri = uri
+                cameraLauncher.launch(uri)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     Scaffold(
@@ -197,11 +213,11 @@ fun CreateComplaintScreen(
                         val stateReq = userState.toRequestBody("text/plain".toMediaTypeOrNull())
                         val landmarkReq = landmark.toRequestBody("text/plain".toMediaTypeOrNull())
 
-                        viewModel.createComplaint(descReq, latReq, lngReq, cityReq, stateReq, landmarkReq, imagePart, onNavigateBack)
+                        viewModel.createComplaint(descReq, latReq, lngReq, cityReq, stateReq, landmarkReq, imagePart, onSuccess)
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    enabled = !state.isLoading && description.isNotBlank() && lat != "0.0" && lng != "0.0"
+                    enabled = !state.isLoading && description.isNotBlank() && lat != "0.0" && lng != "0.0" && landmark.isNotBlank()
                 ) {
                     Text(if (state.isLoading) "Submitting..." else "Submit Complaint", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 }
@@ -275,6 +291,25 @@ fun CreateComplaintScreen(
                 }
             }
 
+            if (lat != "0.0" && lng != "0.0") {
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = landmark,
+                    onValueChange = { landmark = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Landmark (Required)") },
+                    placeholder = { Text("E.g., Near City Mall, Opp. Park") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha=0.4f)
+                    )
+                )
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             // Evidence Photos
@@ -301,7 +336,21 @@ fun CreateComplaintScreen(
                 }
 
                 Box(
-                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceContainer).border(2.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.3f), RoundedCornerShape(12.dp)).clickable { cameraLauncher.launch(cameraUri) },
+                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceContainer).border(2.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.3f), RoundedCornerShape(12.dp)).clickable { 
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                            try {
+                                val file = File(context.cacheDir, "camera_photo_${System.currentTimeMillis()}.jpg")
+                                if (!file.exists()) file.createNewFile()
+                                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                                tempCameraUri = uri
+                                cameraLauncher.launch(uri)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        } else {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
+                    },
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {

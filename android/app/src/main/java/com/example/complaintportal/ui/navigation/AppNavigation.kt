@@ -90,19 +90,31 @@ fun AppNavigation(
             }
 
             composable(Screen.Dashboard.route) {
-                DashboardScreen(
-                    viewModel = complaintViewModel,
-                    isAdmin = authState.user?.isAdmin == true,
-                    userName = authState.user?.fullName ?: "Citizen",
-                    onNavigateToCreate = { navController.navigate(Screen.CreateComplaint.route) },
-                    onNavigateToDetail = { complaintId -> 
-                        if (complaintId == "profile") {
-                            navController.navigate(Screen.Profile.route)
-                        } else {
-                            navController.navigate(Screen.ComplaintDetail.createRoute(complaintId)) 
+                if (authState.user?.isAdmin == true) {
+                    AdminDashboardScreen(
+                        viewModel = complaintViewModel,
+                        onNavigateToDetail = { complaintId -> 
+                            if (complaintId == "profile") {
+                                navController.navigate(Screen.Profile.route)
+                            } else {
+                                navController.navigate(Screen.ComplaintDetail.createRoute(complaintId)) 
+                            }
                         }
-                    }
-                )
+                    )
+                } else {
+                    UserDashboardScreen(
+                        viewModel = complaintViewModel,
+                        userName = authState.user?.fullName ?: "Citizen",
+                        onNavigateToCreate = { navController.navigate(Screen.CreateComplaint.route) },
+                        onNavigateToDetail = { complaintId -> 
+                            if (complaintId == "profile") {
+                                navController.navigate(Screen.Profile.route)
+                            } else {
+                                navController.navigate(Screen.ComplaintDetail.createRoute(complaintId)) 
+                            }
+                        }
+                    )
+                }
             }
 
             composable(Screen.Profile.route) {
@@ -115,7 +127,12 @@ fun AppNavigation(
             composable(Screen.CreateComplaint.route) {
                 CreateComplaintScreen(
                     viewModel = complaintViewModel,
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    onSuccess = {
+                        navController.navigate(Screen.Dashboard.route) {
+                            popUpTo(Screen.Dashboard.route) { inclusive = true }
+                        }
+                    }
                 )
             }
 
