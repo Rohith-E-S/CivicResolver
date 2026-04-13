@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -22,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.BasicTextField
 import com.example.complaintportal.ui.viewmodel.ComplaintViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,9 +33,11 @@ fun AdminDashboardScreen(
     onNavigateToDetail: (String) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
     var isRefreshing by remember { mutableStateOf(false) }
+
+    val pagerState = rememberPagerState(pageCount = { 3 })
+    val coroutineScope = rememberCoroutineScope()
 
     val onRefresh = {
         isRefreshing = true
@@ -130,12 +135,45 @@ fun AdminDashboardScreen(
                 )
             }
 
-            PullToRefreshBox(
-                isRefreshing = isRefreshing,
-                onRefresh = onRefresh,
-                modifier = Modifier.fillMaxSize()
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 16.dp)
             ) {
-                val list = when (selectedTabIndex) {
+                item {
+                    StatCard(
+                        title = "New Actions",
+                        count = state.newComplaints.size.toString(),
+                        color = MaterialTheme.colorScheme.primary,
+                        isSelected = pagerState.currentPage == 0,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } }
+                    )
+                }
+                item {
+                    StatCard(
+                        title = "Active Processing",
+                        count = state.inProgressComplaints.size.toString(),
+                        color = MaterialTheme.colorScheme.tertiary,
+                        isSelected = pagerState.currentPage == 1,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } }
+                    )
+                }
+                item {
+                    StatCard(
+                        title = "Resolved By Team",
+                        count = state.resolvedComplaints.size.toString(),
+                        color = MaterialTheme.colorScheme.secondary,
+                        isSelected = pagerState.currentPage == 2,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } }
+                    )
+                }
+            }
+
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.weight(1f)
+            ) { page ->
+                val list = when (page) {
                     0 -> state.newComplaints
                     1 -> state.inProgressComplaints
                     2 -> state.resolvedComplaints
@@ -152,62 +190,32 @@ fun AdminDashboardScreen(
                     }
                 }
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = onRefresh,
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    item {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        if (filteredList.isEmpty() && !state.isLoading) {
                             item {
-                                StatCard(
-                                    title = "New",
-                                    count = state.newComplaints.size.toString(),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    isSelected = selectedTabIndex == 0,
-                                    onClick = { selectedTabIndex = 0 }
-                                )
+                                Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text("No pending issues found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
-                            item {
-                                StatCard(
-                                    title = "Active",
-                                    count = state.inProgressComplaints.size.toString(),
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                    isSelected = selectedTabIndex == 1,
-                                    onClick = { selectedTabIndex = 1 }
-                                )
-                            }
-                            item {
-                                StatCard(
-                                    title = "Resolved",
-                                    count = state.resolvedComplaints.size.toString(),
-                                    color = MaterialTheme.colorScheme.secondary,
-                                    isSelected = selectedTabIndex == 2,
-                                    onClick = { selectedTabIndex = 2 }
-                                )
-                            }
-                        }
-                    }
-
-                    if (filteredList.isEmpty() && !state.isLoading) {
-                        item {
-                            Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("No pending issues found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    } else {
-                        items(filteredList) { complaint ->
-                            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                ComplaintCard(
-                                    complaint = complaint,
-                                    isAdmin = true,
-                                    onClick = { onNavigateToDetail(complaint.id) },
-                                    onUpdateStatusClick = { onNavigateToDetail(complaint.id) }
-                                )
+                        } else {
+                            items(filteredList) { complaint ->
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    ComplaintCard(
+                                        complaint = complaint,
+                                        isAdmin = true,
+                                        onClick = { onNavigateToDetail(complaint.id) },
+                                        onUpdateStatusClick = { onNavigateToDetail(complaint.id) }
+                                    )
+                                }
                             }
                         }
                     }

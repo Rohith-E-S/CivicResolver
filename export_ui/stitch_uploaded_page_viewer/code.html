@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CivicResolve Admin Dashboard</title>
+<!-- Tailwind CSS v3 CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- BEGIN: Custom Styling -->
+<style data-purpose="material-theme-variables">
+    :root {
+      /* Material Design 3 Color System (Light Theme) */
+      --md-sys-color-primary: #0061a4;
+      --md-sys-color-on-primary: #ffffff;
+      --md-sys-color-primary-container: #d1e4ff;
+      --md-sys-color-on-primary-container: #001d36;
+      
+      --md-sys-color-secondary: #535f70;
+      --md-sys-color-on-secondary: #ffffff;
+      --md-sys-color-secondary-container: #d7e3f7;
+      --md-sys-color-on-secondary-container: #101c2b;
+      
+      --md-sys-color-tertiary: #6b5778;
+      --md-sys-color-on-tertiary: #ffffff;
+      --md-sys-color-tertiary-container: #f2daff;
+      --md-sys-color-on-tertiary-container: #251431;
+
+      --md-sys-color-background: #fdfcff;
+      --md-sys-color-on-background: #1a1c1e;
+      
+      --md-sys-color-surface: #fdfcff;
+      --md-sys-color-on-surface: #1a1c1e;
+      --md-sys-color-surface-variant: #dfe2eb;
+      --md-sys-color-on-surface-variant: #43474e;
+      --md-sys-color-outline: #73777f;
+      --md-sys-color-outline-variant: #c3c7cf;
+    }
+  </style>
+<style data-purpose="layout-and-components">
+    body {
+      font-family: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: #e0e0e0;
+    }
+
+    /* Emulating the mobile device container */
+    .device-frame {
+      width: 412px;
+      height: 892px;
+      background-color: var(--md-sys-color-background);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      border-radius: 32px;
+      border: 8px solid #222;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Scrollbar hiding for clean UI */
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Custom badge and card colors to match MD3 system */
+    .status-new {
+      background-color: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+    }
+    .status-progress {
+      background-color: var(--md-sys-color-tertiary-container);
+      color: var(--md-sys-color-on-tertiary-container);
+    }
+    .status-resolved {
+      background-color: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+    }
+
+    /* Tab selection logic styles */
+    .stat-card.selected-primary {
+      background-color: rgba(0, 97, 164, 0.1);
+      border: 2px solid var(--md-sys-color-primary);
+    }
+    .stat-card.selected-primary .text-label { color: var(--md-sys-color-primary); }
+    
+    .stat-card.selected-tertiary {
+      background-color: rgba(107, 87, 120, 0.1);
+      border: 2px solid var(--md-sys-color-tertiary);
+    }
+
+    .stat-card.selected-secondary {
+      background-color: rgba(83, 95, 112, 0.1);
+      border: 2px solid var(--md-sys-color-secondary);
+    }
+
+    /* Card Shadow matching Screen 3 style */
+    .card-shadow {
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    }
+  </style>
+<!-- END: Custom Styling -->
+</head>
+<body class="flex justify-center items-center min-h-screen py-8">
+<!-- BEGIN: MobileDeviceFrame -->
+<div class="device-frame flex flex-col">
+<!-- BEGIN: TopAppBar -->
+<header class="flex items-center justify-between p-4 bg-transparent" data-purpose="header">
+<h1 class="text-[22px] font-bold tracking-tight" style="color: var(--md-sys-color-on-primary-container);">
+        CivicResolve Admin
+      </h1>
+<div class="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer" style="background-color: var(--md-sys-color-surface-variant);">
+<svg class="w-6 h-6" fill="currentColor" viewbox="0 0 24 24">
+<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path>
+</svg>
+</div>
+</header>
+<!-- END: TopAppBar -->
+<!-- BEGIN: MainScrollArea -->
+<main class="flex-1 overflow-y-auto px-4 pb-4 flex flex-col gap-4">
+<!-- BEGIN: WelcomeAndSearch -->
+<section class="flex justify-between items-center gap-3 pt-2">
+<div class="welcome-text">
+<p class="text-[12px] uppercase tracking-wider font-semibold" style="color: var(--md-sys-color-on-surface-variant);">Admin Console,</p>
+<p class="text-[22px] font-extrabold leading-tight">Overview</p>
+</div>
+<div class="flex-1 h-12 flex items-center px-4 gap-2 rounded-full border bg-white" style="border-color: rgba(195, 199, 207, 0.5);">
+<svg class="w-5 h-5" fill="currentColor" style="color: var(--md-sys-color-on-surface-variant);" viewbox="0 0 24 24">
+<path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 12.01 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 12.01 14 9.5 14z"></path>
+</svg>
+<input class="bg-transparent border-none focus:ring-0 text-base w-full p-0" placeholder="Search..." type="text"/>
+</div>
+</section>
+<!-- END: WelcomeAndSearch -->
+<!-- BEGIN: HorizontalStatTabs -->
+<section class="stat-tabs flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+<!-- Tab 1: New -->
+<div class="stat-card selected-primary flex items-center gap-2 px-4 py-2 rounded-xl cursor-pointer border shrink-0" style="border-color: rgba(195, 199, 207, 0.2);">
+<span class="text-label text-[12px] font-bold" style="color: var(--md-sys-color-on-surface-variant);">New</span>
+<span class="text-[16px] font-bold" style="color: var(--md-sys-color-on-surface);">12</span>
+</div>
+<!-- Tab 2: Active -->
+<div class="stat-card flex items-center gap-2 px-4 py-2 rounded-xl bg-white cursor-pointer border shrink-0" style="border-color: rgba(195, 199, 207, 0.2);">
+<span class="text-[12px] font-bold" style="color: var(--md-sys-color-on-surface-variant);">Active</span>
+<span class="text-[16px] font-bold" style="color: var(--md-sys-color-on-surface);">5</span>
+</div>
+<!-- Tab 3: Resolved -->
+<div class="stat-card flex items-center gap-2 px-4 py-2 rounded-xl bg-white cursor-pointer border shrink-0" style="border-color: rgba(195, 199, 207, 0.2);">
+<span class="text-[12px] font-bold" style="color: var(--md-sys-color-on-surface-variant);">Resolved</span>
+<span class="text-[16px] font-bold" style="color: var(--md-sys-color-on-surface);">34</span>
+</div>
+</section>
+<!-- END: HorizontalStatTabs -->
+<!-- BEGIN: ComplaintList -->
+<section class="flex flex-col gap-4">
+<!-- Complaint Card 1 - Updated to match Screen 3 layout -->
+<article class="bg-white rounded-md overflow-hidden flex flex-row card-shadow border border-gray-100 cursor-pointer h-36" data-purpose="listing-card">
+<div class="w-2/5 relative flex items-center justify-center bg-gray-50 border-r border-gray-50"><img alt="Road Damage - Pothole" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHkR5XCMnG31eWHqIJDH3cY_mdyO_C1jwFZuGe_RyNFP9I7qjw8kIHSoJDrt_X8vL1IBToeFzB1bqwJSE1W_98h6Dunqk88eRPNPx6IE9cwcQF0ndznxvCiT9xGrOa-x1X9hPPtTLQDNRbqqCG0fMGNEBXlhNBdDRE3PU--WPkNdB5txrypKHD_u7lQXHErmxBUM9QypIzX_04IvEcCRVXky-pjA_41qUIyuNrwhSYp9D1VsO5pF1B5sFo2jGKlaxKgn0HALjPEpDG"/>
+<span class="absolute top-2 left-2 status-new px-2 py-0.5 rounded-sm text-[9px] font-bold uppercase">NEW</span></div>
+<div class="w-3/5 p-3 flex flex-col justify-between relative gap-1">
+<button aria-label="Quick Actions" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">
+<svg class="h-5 w-5" fill="currentColor" viewbox="0 0 24 24">
+<path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path>
+</svg>
+</button>
+<div>
+<h2 class="text-base font-bold truncate pr-6" style="color: #002f34;">Road Damage</h2>
+<p class="text-xs text-gray-700 line-clamp-2 mt-1">Deep pothole reported on the main highway intersection causing severe traffic delays.</p>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-1 text-[10px] text-gray-500">
+<svg class="h-3 w-3" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="truncate">Springfield, IL</span>
+</div>
+<div class="text-[10px] font-medium mt-1" style="color: var(--md-sys-color-on-surface-variant);">Oct 24, 2026</div>
+</div>
+</div>
+</article>
+<!-- Complaint Card 2 - Updated to match Screen 3 layout -->
+<article class="bg-white rounded-md overflow-hidden flex flex-row card-shadow border border-gray-100 cursor-pointer h-36" data-purpose="listing-card">
+<div class="w-2/5 relative flex items-center justify-center bg-gray-50 border-r border-gray-50"><img alt="Water Leakage - Burst Pipe" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdPyHnQRokG5KCg2dxVkLCRcIwlfyeUVgjFSZASyBMrOizzbm0ROd4-AUim5pCbuzFnIbMBvq9vsZPhBXIoKX7M4VfP9m50zcar_rxgdHSjclREfRqx_r-v2ez4kIRwYjFLviFPx6PwsmxauGqb6PPv_vDRa1KO6zeJpfu35AJSx-ZoNs__A0WWSic6zeTgf5qTSeghOy-fb7i6_BeLYHaLXSe515Wh_04aea1czlJKWHfQKlhEv0250s58p3ny0hBYaJUk1Dn4-sR"/>
+<span class="absolute top-2 left-2 status-progress px-2 py-0.5 rounded-sm text-[9px] font-bold uppercase">IN PROGRESS</span></div>
+<div class="w-3/5 p-3 flex flex-col justify-between relative gap-1">
+<button aria-label="Quick Actions" class="absolute top-2 right-2 text-gray-400">
+<svg class="h-5 w-5" fill="currentColor" viewbox="0 0 24 24">
+<path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path>
+</svg>
+</button>
+<div>
+<h2 class="text-base font-bold truncate pr-6" style="color: #002f34;">Water Leakage</h2>
+<p class="text-xs text-gray-700 line-clamp-2 mt-1">Burst pipe near the community center flooding the adjacent park area.</p>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-1 text-[10px] text-gray-500">
+<svg class="h-3 w-3" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="truncate">Shelbyville, IL</span>
+</div>
+<div class="text-[10px] font-medium mt-1" style="color: var(--md-sys-color-on-surface-variant);">Oct 23, 2026</div>
+</div>
+</div>
+</article>
+</section>
+<!-- END: ComplaintList -->
+</main>
+<!-- END: MainScrollArea -->
+<!-- BEGIN: BottomNavigation -->
+<nav class="flex justify-around items-center px-4 py-3 bg-white border-t" style="box-shadow: 0 -1px 4px rgba(0,0,0,0.05);">
+<!-- Nav Item 1 -->
+<div class="flex flex-col items-center px-5 py-2 rounded-2xl cursor-pointer" style="background-color: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container);">
+<svg class="w-6 h-6" fill="currentColor" viewbox="0 0 24 24">
+<path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"></path>
+</svg>
+<span class="text-[11px] font-bold mt-1">Dashboard</span>
+</div>
+<!-- Nav Item 2 -->
+<div class="flex flex-col items-center px-5 py-2 rounded-2xl cursor-pointer" style="color: var(--md-sys-color-outline);">
+<svg class="w-6 h-6" fill="currentColor" viewbox="0 0 24 24">
+<path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z"></path>
+</svg>
+<span class="text-[11px] font-bold mt-1">Requests</span>
+</div>
+<!-- Nav Item 3 -->
+<div class="flex flex-col items-center px-5 py-2 rounded-2xl cursor-pointer" style="color: var(--md-sys-color-outline);">
+<svg class="w-6 h-6" fill="currentColor" viewbox="0 0 24 24">
+<path d="M17 11c.34 0 .67.04 1 .09V6.27L10.5 3 3 6.27v4.91c0 4.54 3.2 8.79 7.5 9.82.55-.13 1.08-.32 1.6-.55-.69-.98-1.1-2.17-1.1-3.45 0-3.31 2.69-6 6-6zM10.5 5l5 2.18v2.54c0 .35-.07.68-.15 1H5.65c-.08-.32-.15-.65-.15-1V7.18L10.5 5zm6.5 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm-.5-6h1v3h-1z"></path>
+</svg>
+<span class="text-[11px] font-bold mt-1">Admin</span>
+</div>
+<!-- Nav Item 4 -->
+<div class="flex flex-col items-center px-5 py-2 rounded-2xl cursor-pointer" style="color: var(--md-sys-color-outline);">
+<svg class="w-6 h-6" fill="currentColor" viewbox="0 0 24 24">
+<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path>
+</svg>
+<span class="text-[11px] font-bold mt-1">Profile</span>
+</div>
+</nav>
+<!-- END: BottomNavigation -->
+</div>
+<!-- END: MobileDeviceFrame -->
+</body></html>

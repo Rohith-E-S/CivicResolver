@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicResolve Admin Dashboard</title>
+    <style>
+        :root {
+            /* Material Design 3 Color System (Light Theme) */
+            --md-sys-color-primary: #0061a4;
+            --md-sys-color-on-primary: #ffffff;
+            --md-sys-color-primary-container: #d1e4ff;
+            --md-sys-color-on-primary-container: #001d36;
+            
+            --md-sys-color-secondary: #535f70;
+            --md-sys-color-on-secondary: #ffffff;
+            --md-sys-color-secondary-container: #d7e3f7;
+            --md-sys-color-on-secondary-container: #101c2b;
+            
+            --md-sys-color-tertiary: #6b5778;
+            --md-sys-color-on-tertiary: #ffffff;
+            --md-sys-color-tertiary-container: #f2daff;
+            --md-sys-color-on-tertiary-container: #251431;
+
+            --md-sys-color-background: #fdfcff;
+            --md-sys-color-on-background: #1a1c1e;
+            
+            --md-sys-color-surface: #fdfcff;
+            --md-sys-color-on-surface: #1a1c1e;
+            --md-sys-color-surface-variant: #dfe2eb;
+            --md-sys-color-on-surface-variant: #43474e;
+            --md-sys-color-outline: #73777f;
+            --md-sys-color-outline-variant: #c3c7cf;
+
+            font-family: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--md-sys-color-background);
+            color: var(--md-sys-color-on-background);
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            background-color: #e0e0e0;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        /* Phone Container */
+        .device {
+            width: 412px;
+            height: 892px; /* Standard Android Aspect Ratio */
+            background-color: var(--md-sys-color-background);
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin: 20px 0;
+            border-radius: 32px;
+            border: 8px solid #222;
+        }
+
+        /* Top App Bar */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background-color: var(--md-sys-color-background);
+        }
+
+        .app-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--md-sys-color-on-primary-container);
+            margin: 0;
+        }
+
+        .profile-icon {
+            width: 40px;
+            height: 40px;
+            background-color: var(--md-sys-color-surface-variant);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* Main Content Area */
+        main {
+            flex: 1;
+            padding: 8px 16px 16px 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Welcome Section */
+        .welcome-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .welcome-text p {
+            margin: 0;
+        }
+        
+        .welcome-sub {
+            font-size: 12px;
+            color: var(--md-sys-color-on-surface-variant);
+            letter-spacing: 0.5px;
+        }
+
+        .welcome-main {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        /* Search Bar */
+        .search-bar {
+            flex: 1;
+            height: 48px;
+            background-color: var(--md-sys-color-surface);
+            border: 1px solid rgba(195, 199, 207, 0.5); /* outlineVariant */
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 8px;
+            color: var(--md-sys-color-on-surface-variant);
+        }
+        
+        .search-bar input {
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 16px;
+            width: 100%;
+            color: var(--md-sys-color-on-surface);
+        }
+
+        /* Stat Tabs */
+        .stat-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            scrollbar-width: none; /* Firefox */
+        }
+        .stat-tabs::-webkit-scrollbar {
+            display: none; /* Safari and Chrome */
+        }
+
+        .stat-card {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 12px;
+            background-color: var(--md-sys-color-surface);
+            border: 1px solid rgba(195, 199, 207, 0.2);
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .stat-card.selected {
+            background-color: rgba(0, 97, 164, 0.1); /* Primary with opacity */
+            border: 2px solid var(--md-sys-color-primary);
+        }
+
+        .stat-card-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--md-sys-color-on-surface-variant);
+        }
+        
+        .stat-card.selected .stat-card-title {
+            color: var(--md-sys-color-primary);
+        }
+
+        .stat-card-count {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--md-sys-color-on-surface);
+        }
+        
+        .stat-card.selected .stat-card-count {
+            color: var(--md-sys-color-primary);
+        }
+
+        /* Second and Third Tabs Colors (Mocking Compose Logic) */
+        .stat-card:nth-child(2).selected {
+            background-color: rgba(107, 87, 120, 0.1);
+            border-color: var(--md-sys-color-tertiary);
+        }
+        .stat-card:nth-child(2).selected .stat-card-title,
+        .stat-card:nth-child(2).selected .stat-card-count {
+            color: var(--md-sys-color-tertiary);
+        }
+        
+        .stat-card:nth-child(3).selected {
+            background-color: rgba(83, 95, 112, 0.1);
+            border-color: var(--md-sys-color-secondary);
+        }
+        .stat-card:nth-child(3).selected .stat-card-title,
+        .stat-card:nth-child(3).selected .stat-card-count {
+            color: var(--md-sys-color-secondary);
+        }
+
+
+        /* Complaint Card */
+        .complaint-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .complaint-card {
+            background-color: var(--md-sys-color-surface);
+            border: 1px solid rgba(195, 199, 207, 0.2);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .category-icon {
+            width: 40px;
+            height: 40px;
+            background-color: var(--md-sys-color-surface-variant);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--md-sys-color-primary);
+        }
+
+        .category-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .category-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .category-city {
+            font-size: 12px;
+            color: var(--md-sys-color-on-surface-variant);
+            margin: 0;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-new {
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-on-primary-container);
+        }
+        
+        .status-progress {
+            background-color: var(--md-sys-color-tertiary-container);
+            color: var(--md-sys-color-on-tertiary-container);
+        }
+        
+        .status-resolved {
+            background-color: var(--md-sys-color-secondary-container);
+            color: var(--md-sys-color-on-secondary-container);
+        }
+
+        .card-description {
+            font-size: 14px;
+            color: var(--md-sys-color-on-surface-variant);
+            margin: 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-location {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--md-sys-color-on-surface-variant);
+        }
+
+        .update-btn {
+            width: 100%;
+            height: 36px;
+            border-radius: 12px;
+            background-color: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-primary);
+            font-size: 12px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+
+        /* Bottom Nav Bar */
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 12px 16px;
+            background-color: var(--md-sys-color-surface);
+            box-shadow: 0 -1px 4px rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 20px;
+            border-radius: 16px;
+            cursor: pointer;
+            color: var(--md-sys-color-outline);
+        }
+
+        .nav-item.selected {
+            background-color: var(--md-sys-color-primary-container);
+            color: var(--md-sys-color-on-primary-container);
+        }
+
+        .nav-label {
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+        
+        /* Icons (using SVG inline for standalone HTML) */
+        svg { width: 24px; height: 24px; fill: currentColor; }
+        .icon-small { width: 16px; height: 16px; }
+        .icon-medium { width: 20px; height: 20px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="device">
+        <!-- Top App Bar -->
+        <header>
+            <h1 class="app-title">CivicResolve Admin</h1>
+            <div class="profile-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Header Row -->
+            <div class="welcome-section">
+                <div class="welcome-text">
+                    <p class="welcome-sub">Admin Console,</p>
+                    <p class="welcome-main">Overview</p>
+                </div>
+                <div class="search-bar">
+                    <svg class="icon-medium" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 12.01 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 12.01 14 9.5 14z"/></svg>
+                    <input type="text" placeholder="Search...">
+                </div>
+            </div>
+
+            <!-- Horizontal Scroll Tabs (Stat Cards) -->
+            <div class="stat-tabs">
+                <div class="stat-card selected">
+                    <span class="stat-card-title">New</span>
+                    <span class="stat-card-count">12</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-card-title">Active</span>
+                    <span class="stat-card-count">5</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-card-title">Resolved</span>
+                    <span class="stat-card-count">34</span>
+                </div>
+            </div>
+
+            <!-- Complaint List -->
+            <div class="complaint-list">
+                <!-- Card 1 -->
+                <div class="complaint-card">
+                    <div class="card-header">
+                        <div class="card-header-left">
+                            <div class="category-icon">
+                                <svg class="icon-medium" viewBox="0 0 24 24"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg>
+                            </div>
+                            <div class="category-text">
+                                <p class="category-title">Road Damage</p>
+                                <p class="category-city">Springfield</p>
+                            </div>
+                        </div>
+                        <span class="status-badge status-new">NEW</span>
+                    </div>
+                    <p class="card-description">Deep pothole reported on the main highway intersection causing severe traffic delays and potential vehicle damage.</p>
+                    <div class="card-location">
+                        <svg class="icon-small" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                        <span>Springfield, IL</span>
+                    </div>
+                    <button class="update-btn">Update Status</button>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="complaint-card">
+                    <div class="card-header">
+                        <div class="card-header-left">
+                            <div class="category-icon">
+                                <svg class="icon-medium" viewBox="0 0 24 24"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg>
+                            </div>
+                            <div class="category-text">
+                                <p class="category-title">Water Leakage</p>
+                                <p class="category-city">Shelbyville</p>
+                            </div>
+                        </div>
+                        <span class="status-badge status-progress">IN PROGRESS</span>
+                    </div>
+                    <p class="card-description">Burst pipe near the community center flooding the adjacent park area.</p>
+                    <div class="card-location">
+                        <svg class="icon-small" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                        <span>Shelbyville, IL</span>
+                    </div>
+                    <button class="update-btn">Update Status</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <div class="nav-item selected">
+                <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+                <span class="nav-label">Dashboard</span>
+            </div>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24"><path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z"/></svg>
+                <span class="nav-label">Requests</span>
+            </div>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24"><path d="M17 11c.34 0 .67.04 1 .09V6.27L10.5 3 3 6.27v4.91c0 4.54 3.2 8.79 7.5 9.82.55-.13 1.08-.32 1.6-.55-.69-.98-1.1-2.17-1.1-3.45 0-3.31 2.69-6 6-6zM10.5 5l5 2.18v2.54c0 .35-.07.68-.15 1H5.65c-.08-.32-.15-.65-.15-1V7.18L10.5 5zm6.5 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm-.5-6h1v3h-1z"/></svg>
+                <span class="nav-label">Admin</span>
+            </div>
+            <div class="nav-item">
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <span class="nav-label">Profile</span>
+            </div>
+        </nav>
+    </div>
+
+</body>
+</html>
