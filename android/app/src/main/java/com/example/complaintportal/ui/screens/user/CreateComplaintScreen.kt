@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,14 +53,14 @@ fun CreateComplaintScreen(
     onSuccess: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
-    var description by remember { mutableStateOf("") }
-    var city by remember { mutableStateOf("") }
-    var userState by remember { mutableStateOf("") }
-    var landmark by remember { mutableStateOf("") }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var lat by remember { mutableStateOf("0.0") }
-    var lng by remember { mutableStateOf("0.0") }
-    var locationMessage by remember { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var city by rememberSaveable { mutableStateOf("") }
+    var userState by rememberSaveable { mutableStateOf("") }
+    var landmark by rememberSaveable { mutableStateOf("") }
+    var selectedImageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    var lat by rememberSaveable { mutableStateOf("0.0") }
+    var lng by rememberSaveable { mutableStateOf("0.0") }
+    var locationMessage by rememberSaveable { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
     val context = LocalContext.current
@@ -155,7 +156,7 @@ fun CreateComplaintScreen(
         }
     }
 
-    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+    var tempCameraUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { resultUri ->
         if (resultUri != null) selectedImageUri = resultUri
