@@ -137,6 +137,10 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         }
     }
 
+    fun setError(message: String) {
+        _authState.value = _authState.value.copy(error = message)
+    }
+
     fun logout() {
         viewModelScope.launch {
             _authState.value = _authState.value.copy(isLoading = true)

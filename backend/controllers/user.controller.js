@@ -121,7 +121,7 @@ export const createAccount = async (req, res) => {
     const token = await newUser.getJWT();
 
     res.cookie("token", token, {
-      expires: new Date(Date.now() + 3600000),
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     return res.json({
@@ -157,7 +157,7 @@ export const login = async (req, res) => {
     const token = await userData.getJWT();
 
     res.cookie("token", token, {
-      expires: new Date(Date.now() + 3600000),
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     res.status(201).json({
@@ -227,11 +227,10 @@ export const updateProfile = async (req, res) => {
 // -------------------------------------------------------------
 export const checkAuth = (req, res) => {
   try {
-    return res.status(200).json({ success: true, user: req.user });
-  } catch {
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal Server Error" });
+    return res.status(200).json({ success: true, user: req.user.toObject() });
+  } catch (error) {
+    console.error("checkAuth Error:", error);
+    return res.status(500).json({ success: false, message: error.message || "Internal Server Error" });
   }
 };
 
@@ -264,18 +263,18 @@ export const googleLogin = async (req, res) => {
     }
 
     // Create a JWT token
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET_KEY, {
+    const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET_KEY, {
       expiresIn: "7d",
     });
 
     res.cookie("token", token, {
-      expires: new Date(Date.now() + 3600000),
+      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
     return res.status(200).json({
       success: true,
       token,
-      user,
+      user: user.toObject(),
     });
   } catch (error) {
     console.error("Google Login Error:", error);

@@ -47,7 +47,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val authRepository: AuthRepository by lazy {
-        AuthRepository(retrofitService)
+        AuthRepository(retrofitService, cookieJar)
     }
 
     override val complaintRepository: ComplaintRepository by lazy {

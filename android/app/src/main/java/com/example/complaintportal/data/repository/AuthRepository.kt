@@ -2,11 +2,12 @@ package com.example.complaintportal.data.repository
 
 import com.example.complaintportal.data.model.*
 import com.example.complaintportal.data.remote.ApiService
+import com.example.complaintportal.data.remote.CookieJarImpl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
-class AuthRepository(private val apiService: ApiService) {
+class AuthRepository(private val apiService: ApiService, private val cookieJar: CookieJarImpl) {
 
     private fun parseError(errorBody: String?): String {
         return try {
@@ -49,6 +50,7 @@ class AuthRepository(private val apiService: ApiService) {
         try {
             val response = apiService.createAccount(request)
             if (response.isSuccessful && response.body() != null) {
+                response.body()?.token?.let { cookieJar.setToken(it) }
                 Result.success(response.body()!!)
             } else {
                 val errorMsg = parseError(response.errorBody()?.string())
@@ -63,6 +65,7 @@ class AuthRepository(private val apiService: ApiService) {
         try {
             val response = apiService.login(request)
             if (response.isSuccessful && response.body() != null) {
+                response.body()?.token?.let { cookieJar.setToken(it) }
                 Result.success(response.body()!!)
             } else {
                 val errorMsg = parseError(response.errorBody()?.string())
@@ -77,6 +80,7 @@ class AuthRepository(private val apiService: ApiService) {
         try {
             val response = apiService.googleLogin(request)
             if (response.isSuccessful && response.body() != null) {
+                response.body()?.token?.let { cookieJar.setToken(it) }
                 Result.success(response.body()!!)
             } else {
                 val errorMsg = parseError(response.errorBody()?.string())
@@ -90,6 +94,7 @@ class AuthRepository(private val apiService: ApiService) {
     suspend fun logout(): Result<BaseResponse> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.logout()
+            cookieJar.clearCookies()
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
@@ -97,6 +102,7 @@ class AuthRepository(private val apiService: ApiService) {
                 Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
+            cookieJar.clearCookies()
             Result.failure(e)
         }
     }

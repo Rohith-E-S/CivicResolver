@@ -1,6 +1,5 @@
 package com.example.complaintportal.ui.screens
 
-import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -33,9 +32,12 @@ import com.example.complaintportal.data.model.CreateAccountRequest
 import com.example.complaintportal.data.model.GoogleLoginRequest
 import com.example.complaintportal.data.model.LoginRequest
 import com.example.complaintportal.ui.viewmodel.AuthViewModel
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,34 +51,49 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val webClientId = remember(context) { context.getString(R.string.google_web_client_id).trim() }
 
     // Google Sign-In setup
-    val gso = remember {
-        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestEmail()
-            .requestProfile()
-            // .requestIdToken("YOUR_WEB_CLIENT_ID") // User needs to add this
-            .build()
+    val googleGsoWithIdToken = remember(webClientId) { buildGoogleSignInOptions(webClientId) }
+    val googleGsoBasic = remember { buildGoogleSignInOptions(null) }
+    val googleSignInClientWithIdToken = remember(context, googleGsoWithIdToken) {
+        GoogleSignIn.getClient(context, googleGsoWithIdToken)
     }
-    val googleSignInClient = remember { GoogleSignIn.getClient(context, gso) }
+    val googleSignInClientBasic = remember(context, googleGsoBasic) {
+        GoogleSignIn.getClient(context, googleGsoBasic)
+    }
+    var launchedWithIdToken by remember { mutableStateOf(false) }
+    var retryWithoutIdToken by remember { mutableStateOf(false) }
 
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                val account = task.getResult(ApiException::class.java)
-                val googleRequest = GoogleLoginRequest(
-                    email = account.email ?: "",
-                    fullName = account.displayName ?: "",
-                    profilePic = account.photoUrl?.toString(),
-                    googleId = account.id ?: ""
-                )
-                viewModel.googleLogin(googleRequest, onLoginSuccess)
-            } catch (e: ApiException) {
-                // Handle error
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            val googleRequest = account.toGoogleLoginRequest()
+            if (googleRequest == null) {
+                viewModel.setError("Google sign in failed: missing account details")
+                return@rememberLauncherForActivityResult
             }
+            viewModel.googleLogin(googleRequest, onLoginSuccess)
+            launchedWithIdToken = false
+        } catch (e: ApiException) {
+            if (e.statusCode == CommonStatusCodes.DEVELOPER_ERROR && launchedWithIdToken) {
+                retryWithoutIdToken = true
+                launchedWithIdToken = false
+            } else {
+                viewModel.setError(e.toGoogleAuthMessage(launchedWithIdToken))
+                launchedWithIdToken = false
+            }
+        }
+    }
+
+    LaunchedEffect(retryWithoutIdToken) {
+        if (retryWithoutIdToken) {
+            retryWithoutIdToken = false
+            viewModel.setError("Retrying Google sign in with basic account flow...")
+            googleSignInLauncher.launch(googleSignInClientBasic.signInIntent)
         }
     }
 
@@ -221,7 +238,12 @@ fun LoginScreen(
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surface)
                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f), CircleShape)
-                    .clickable { googleSignInLauncher.launch(googleSignInClient.signInIntent) },
+                    .clickable(enabled = !state.isLoading) {
+                        val useIdToken = webClientId.isNotBlank()
+                        launchedWithIdToken = useIdToken
+                        val client = if (useIdToken) googleSignInClientWithIdToken else googleSignInClientBasic
+                        googleSignInLauncher.launch(client.signInIntent)
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -269,6 +291,52 @@ fun SignupScreen(
     var password by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val webClientId = remember(context) { context.getString(R.string.google_web_client_id).trim() }
+
+    // Google Sign-In setup
+    val googleGsoWithIdToken = remember(webClientId) { buildGoogleSignInOptions(webClientId) }
+    val googleGsoBasic = remember { buildGoogleSignInOptions(null) }
+    val googleSignInClientWithIdToken = remember(context, googleGsoWithIdToken) {
+        GoogleSignIn.getClient(context, googleGsoWithIdToken)
+    }
+    val googleSignInClientBasic = remember(context, googleGsoBasic) {
+        GoogleSignIn.getClient(context, googleGsoBasic)
+    }
+    var launchedWithIdToken by remember { mutableStateOf(false) }
+    var retryWithoutIdToken by remember { mutableStateOf(false) }
+
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            val googleRequest = account.toGoogleLoginRequest()
+            if (googleRequest == null) {
+                viewModel.setError("Google sign in failed: missing account details")
+                return@rememberLauncherForActivityResult
+            }
+            viewModel.googleLogin(googleRequest, onSignupSuccess)
+            launchedWithIdToken = false
+        } catch (e: ApiException) {
+            if (e.statusCode == CommonStatusCodes.DEVELOPER_ERROR && launchedWithIdToken) {
+                retryWithoutIdToken = true
+                launchedWithIdToken = false
+            } else {
+                viewModel.setError(e.toGoogleAuthMessage(launchedWithIdToken))
+                launchedWithIdToken = false
+            }
+        }
+    }
+
+    LaunchedEffect(retryWithoutIdToken) {
+        if (retryWithoutIdToken) {
+            retryWithoutIdToken = false
+            viewModel.setError("Retrying Google sign in with basic account flow...")
+            googleSignInLauncher.launch(googleSignInClientBasic.signInIntent)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -374,6 +442,44 @@ fun SignupScreen(
             Text(if (state.isLoading) "Loading..." else "Complete Registration", fontWeight = FontWeight.Bold)
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+            Text(
+                text = "OR",
+                modifier = Modifier.padding(horizontal = 16.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            )
+            HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f), CircleShape)
+                .clickable(enabled = !state.isLoading) {
+                    val useIdToken = webClientId.isNotBlank()
+                    launchedWithIdToken = useIdToken
+                    val client = if (useIdToken) googleSignInClientWithIdToken else googleSignInClientBasic
+                    googleSignInLauncher.launch(client.signInIntent)
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_google_logo),
+                contentDescription = "Google",
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(
@@ -388,4 +494,47 @@ fun SignupScreen(
             Text(text = state.error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+private fun GoogleSignInAccount.toGoogleLoginRequest(): GoogleLoginRequest? {
+    val emailValue = email?.trim().orEmpty()
+    if (emailValue.isBlank()) return null
+
+    val googleIdValue = id?.trim().orEmpty().ifBlank { emailValue }
+    val fullNameValue = displayName?.trim().orEmpty().ifBlank { emailValue.substringBefore("@") }
+
+    return GoogleLoginRequest(
+        email = emailValue,
+        fullName = fullNameValue,
+        profilePic = photoUrl?.toString(),
+        googleId = googleIdValue
+    )
+}
+
+private fun ApiException.toGoogleAuthMessage(wasUsingIdToken: Boolean): String {
+    return when (statusCode) {
+        GoogleSignInStatusCodes.SIGN_IN_CANCELLED -> "Google sign in was cancelled"
+        GoogleSignInStatusCodes.SIGN_IN_FAILED -> "Google sign in failed. Please try again."
+        CommonStatusCodes.NETWORK_ERROR -> "Network error during Google sign in"
+        CommonStatusCodes.DEVELOPER_ERROR -> {
+            if (wasUsingIdToken) {
+                "Google OAuth Web client mismatch. Verify google_web_client_id belongs to this Firebase project."
+            } else {
+                "Google sign in config mismatch. Add app SHA-1/SHA-256, keep package name com.example.complaintportal, and ensure the Android OAuth client matches this build signature."
+            }
+        }
+        else -> "Google sign in failed: $statusCode"
+    }
+}
+
+private fun buildGoogleSignInOptions(webClientId: String?): GoogleSignInOptions {
+    return GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+        .requestEmail()
+        .requestProfile()
+        .apply {
+            if (!webClientId.isNullOrBlank()) {
+                requestIdToken(webClientId)
+            }
+        }
+        .build()
 }

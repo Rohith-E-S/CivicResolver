@@ -31,6 +31,10 @@ class CookieJarImpl(context: Context) : CookieJar {
         editor.apply()
     }
 
+    fun setToken(token: String) {
+        sharedPreferences.edit().putString("token", token).apply()
+    }
+
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
         val cookies = mutableListOf<Cookie>()
         val token = sharedPreferences.getString("token", null)
