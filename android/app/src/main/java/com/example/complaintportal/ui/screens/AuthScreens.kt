@@ -44,6 +44,7 @@ import com.google.android.gms.common.api.CommonStatusCodes
 fun LoginScreen(
     viewModel: AuthViewModel,
     onNavigateToSignup: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit,
     onLoginSuccess: () -> Unit
 ) {
     val state by viewModel.authState.collectAsState()
@@ -188,7 +189,20 @@ fun LoginScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(onClick = onNavigateToForgotPassword) {
+                Text(
+                    text = "Forgot Password?",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = { viewModel.login(LoginRequest(email, password), onLoginSuccess) },
@@ -283,6 +297,7 @@ fun LoginScreen(
 fun SignupScreen(
     viewModel: AuthViewModel,
     onNavigateToLogin: () -> Unit,
+    onNavigateToOtpVerify: (String) -> Unit,
     onSignupSuccess: () -> Unit
 ) {
     val state by viewModel.authState.collectAsState()
@@ -430,16 +445,20 @@ fun SignupScreen(
 
         Button(
             onClick = {
-                viewModel.createAccount(
-                    CreateAccountRequest(fullName, email, password, address),
-                    onSignupSuccess
-                )
+                if (fullName.isNotBlank() && email.isNotBlank() && password.isNotBlank() && address.isNotBlank()) {
+                    viewModel.pendingSignupRequest = CreateAccountRequest(fullName, email, password, address)
+                    viewModel.sendOtp(email) {
+                        onNavigateToOtpVerify(email)
+                    }
+                } else {
+                    viewModel.setError("Please fill all fields")
+                }
             },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = CircleShape,
             enabled = !state.isLoading
         ) {
-            Text(if (state.isLoading) "Loading..." else "Complete Registration", fontWeight = FontWeight.Bold)
+            Text(if (state.isLoading) "Sending OTP..." else "Continue with email", fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -537,4 +556,297 @@ private fun buildGoogleSignInOptions(webClientId: String?): GoogleSignInOptions 
             }
         }
         .build()
+}
+
+enum class ForgotPasswordStep {
+    ENTER_EMAIL, ENTER_OTP, ENTER_NEW_PASSWORD
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ForgotPasswordScreen(
+    viewModel: AuthViewModel,
+    onNavigateBack: () -> Unit,
+    onPasswordResetSuccess: () -> Unit
+) {
+    val state by viewModel.authState.collectAsState()
+    var currentStep by remember { mutableStateOf(ForgotPasswordStep.ENTER_EMAIL) }
+    
+    var email by remember { mutableStateOf("") }
+    var otp by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var resetToken by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+            }
+            Text(
+                text = "Forgot Password",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        when (currentStep) {
+            ForgotPasswordStep.ENTER_EMAIL -> {
+                Text(
+                    text = "Enter your email address to receive a password reset OTP.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Email") },
+                    leadingIcon = { Icon(Icons.Default.MailOutline, contentDescription = null) },
+                    shape = CircleShape,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+                Button(
+                    onClick = {
+                        if (email.isNotBlank()) {
+                            viewModel.sendPasswordResetOtp(email) {
+                                currentStep = ForgotPasswordStep.ENTER_OTP
+                            }
+                        } else {
+                            viewModel.setError("Please enter your email")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = CircleShape,
+                    enabled = !state.isLoading
+                ) {
+                    Text(if (state.isLoading) "Sending OTP..." else "Send OTP", fontWeight = FontWeight.Bold)
+                }
+            }
+            ForgotPasswordStep.ENTER_OTP -> {
+                Text(
+                    text = "Enter the OTP sent to $email",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                OutlinedTextField(
+                    value = otp,
+                    onValueChange = { otp = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Enter OTP") },
+                    shape = CircleShape,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+                Button(
+                    onClick = {
+                        if (otp.isNotBlank()) {
+                            viewModel.verifyPasswordResetOtp(email, otp) { token ->
+                                resetToken = token
+                                currentStep = ForgotPasswordStep.ENTER_NEW_PASSWORD
+                            }
+                        } else {
+                            viewModel.setError("Please enter the OTP")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = CircleShape,
+                    enabled = !state.isLoading
+                ) {
+                    Text(if (state.isLoading) "Verifying..." else "Verify OTP", fontWeight = FontWeight.Bold)
+                }
+            }
+            ForgotPasswordStep.ENTER_NEW_PASSWORD -> {
+                Text(
+                    text = "Create a new password.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("New Password") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                    trailingIcon = {
+                        val icon = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(icon, contentDescription = "Toggle password visibility")
+                        }
+                    },
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    shape = CircleShape,
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Confirm New Password") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                    visualTransformation = PasswordVisualTransformation(),
+                    shape = CircleShape,
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    )
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+                Button(
+                    onClick = {
+                        if (newPassword == confirmPassword && newPassword.isNotBlank()) {
+                            viewModel.resetPassword(
+                                com.example.complaintportal.data.model.ResetPasswordRequest(newPassword, resetToken)
+                            ) {
+                                onPasswordResetSuccess()
+                            }
+                        } else {
+                            viewModel.setError("Passwords do not match or are empty")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = CircleShape,
+                    enabled = !state.isLoading
+                ) {
+                    Text(if (state.isLoading) "Resetting..." else "Reset Password", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        if (state.error != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = state.error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OtpVerifyScreen(
+    viewModel: AuthViewModel,
+    email: String,
+    onNavigateBack: () -> Unit,
+    onVerifySuccess: () -> Unit
+) {
+    val state by viewModel.authState.collectAsState()
+    var otp by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+            }
+            Text(
+                text = "Verify Email",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = "Enter the 6-digit OTP sent to $email",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        OutlinedTextField(
+            value = otp,
+            onValueChange = { otp = it },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Enter OTP") },
+            shape = CircleShape,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+            )
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Button(
+            onClick = {
+                if (otp.isNotBlank()) {
+                    viewModel.verifyOtp(email, otp) {
+                        val request = viewModel.pendingSignupRequest
+                        if (request != null) {
+                            viewModel.createAccount(request, onVerifySuccess)
+                        } else {
+                            viewModel.setError("Session expired. Please try signing up again.")
+                        }
+                    }
+                } else {
+                    viewModel.setError("Please enter the OTP")
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = CircleShape,
+            enabled = !state.isLoading
+        ) {
+            Text(if (state.isLoading) "Verifying..." else "Verify Account", fontWeight = FontWeight.Bold)
+        }
+
+        if (state.error != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = state.error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+    }
 }

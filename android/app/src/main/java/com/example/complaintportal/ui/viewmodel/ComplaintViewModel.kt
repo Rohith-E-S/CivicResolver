@@ -130,6 +130,40 @@ class ComplaintViewModel(private val repository: ComplaintRepository) : ViewMode
             }
         }
     }
+
+    fun uploadAfterImage(id: String, imageUrl: okhttp3.MultipartBody.Part, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            val result = repository.uploadAfterImage(id, imageUrl)
+            result.onSuccess { response ->
+                if (response.success) {
+                    _state.value = _state.value.copy(isLoading = false, currentComplaint = response.complaint)
+                    onSuccess()
+                } else {
+                    _state.value = _state.value.copy(isLoading = false, error = response.message)
+                }
+            }.onFailure {
+                _state.value = _state.value.copy(isLoading = false, error = it.message)
+            }
+        }
+    }
+
+    fun rateComplaint(id: String, rating: Int, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            val result = repository.rateComplaint(id, rating)
+            result.onSuccess { response ->
+                if (response.success) {
+                    _state.value = _state.value.copy(isLoading = false)
+                    onSuccess()
+                } else {
+                    _state.value = _state.value.copy(isLoading = false, error = response.message)
+                }
+            }.onFailure {
+                _state.value = _state.value.copy(isLoading = false, error = it.message)
+            }
+        }
+    }
 }
 
 class ComplaintViewModelFactory(private val repository: ComplaintRepository) : ViewModelProvider.Factory {

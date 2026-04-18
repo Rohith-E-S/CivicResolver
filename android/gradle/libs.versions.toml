@@ -18,6 +18,9 @@ securityCrypto = "1.1.0-alpha06"
 playServicesAuth = "21.0.0"
 playServicesLocation = "21.2.0"
 playServicesLocationVersion = "21.3.0"
+osmdroid = "6.1.20"
+ucrop = "2.2.8"
+mpandroidchart = "v3.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -50,6 +53,9 @@ navigation-compose = { module = "androidx.navigation:navigation-compose", versio
 socket-io-client = { module = "io.socket:socket.io-client", version.ref = "socketIo" }
 moshi = { module = "com.squareup.moshi:moshi", version.ref = "moshi" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
+osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroid" }
+ucrop = { module = "com.github.yalantis:ucrop", version.ref = "ucrop" }
+mpandroidchart = { module = "com.github.PhilJay:MPAndroidChart", version.ref = "mpandroidchart" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocationVersion" }
 
 [plugins]

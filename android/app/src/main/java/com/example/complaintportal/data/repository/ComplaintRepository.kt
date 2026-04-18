@@ -86,6 +86,21 @@ class ComplaintRepository(private val apiService: ApiService) {
             }
         }
 
+    suspend fun uploadAfterImage(id: String, imageUrl: okhttp3.MultipartBody.Part): Result<SingleComplaintResponse> =
+        withContext(Dispatchers.IO) {
+            try {
+                val response = apiService.uploadAfterImage(id, imageUrl)
+                if (response.isSuccessful && response.body() != null) {
+                    Result.success(response.body()!!)
+                } else {
+                    val errorMsg = parseError(response.errorBody()?.string())
+                    Result.failure(Exception(errorMsg))
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
     suspend fun rateComplaint(id: String, rating: Int): Result<BaseResponse> =
         withContext(Dispatchers.IO) {
             try {

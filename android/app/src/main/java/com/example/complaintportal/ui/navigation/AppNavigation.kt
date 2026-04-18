@@ -25,6 +25,10 @@ import com.example.complaintportal.ui.viewmodel.*
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Signup : Screen("signup")
+    object OtpVerify : Screen("otp_verify/{email}") {
+        fun createRoute(email: String) = "otp_verify/$email"
+    }
+    object ForgotPassword : Screen("forgot_password")
     object Dashboard : Screen("dashboard")
     object Profile : Screen("profile")
     object CreateComplaint : Screen("create_complaint")
@@ -71,9 +75,22 @@ fun AppNavigation(
                 LoginScreen(
                     viewModel = authViewModel,
                     onNavigateToSignup = { navController.navigate(Screen.Signup.route) },
+                    onNavigateToForgotPassword = { navController.navigate(Screen.ForgotPassword.route) },
                     onLoginSuccess = {
                         navController.navigate(Screen.Dashboard.route) {
                             popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(Screen.ForgotPassword.route) {
+                ForgotPasswordScreen(
+                    viewModel = authViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onPasswordResetSuccess = {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.ForgotPassword.route) { inclusive = true }
                         }
                     }
                 )
@@ -83,7 +100,27 @@ fun AppNavigation(
                 SignupScreen(
                     viewModel = authViewModel,
                     onNavigateToLogin = { navController.navigate(Screen.Login.route) },
+                    onNavigateToOtpVerify = { email -> 
+                        navController.navigate(Screen.OtpVerify.createRoute(email))
+                    },
                     onSignupSuccess = {
+                        navController.navigate(Screen.Dashboard.route) {
+                            popUpTo(Screen.Signup.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.OtpVerify.route,
+                arguments = listOf(navArgument("email") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val email = backStackEntry.arguments?.getString("email") ?: ""
+                OtpVerifyScreen(
+                    viewModel = authViewModel,
+                    email = email,
+                    onNavigateBack = { navController.popBackStack() },
+                    onVerifySuccess = {
                         navController.navigate(Screen.Dashboard.route) {
                             popUpTo(Screen.Signup.route) { inclusive = true }
                         }

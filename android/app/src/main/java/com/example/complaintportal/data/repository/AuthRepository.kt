@@ -91,6 +91,48 @@ class AuthRepository(private val apiService: ApiService, private val cookieJar: 
         }
     }
 
+    suspend fun sendPasswordResetOtp(email: String): Result<BaseResponse> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.sendPasswordResetOtp(SendPasswordResetOtpRequest(email))
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                val errorMsg = parseError(response.errorBody()?.string())
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun verifyPasswordResetOtp(email: String, otp: String): Result<VerifyPasswordResetOtpResponse> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.verifyPasswordResetOtp(VerifyPasswordResetOtpRequest(email, otp))
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                val errorMsg = parseError(response.errorBody()?.string())
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun resetPassword(request: ResetPasswordRequest): Result<BaseResponse> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.resetPassword(request)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                val errorMsg = parseError(response.errorBody()?.string())
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun logout(): Result<BaseResponse> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.logout()

@@ -23,6 +23,15 @@ interface ApiService {
     @POST("auth/google-login")
     suspend fun googleLogin(@Body request: GoogleLoginRequest): Response<AuthResponse>
 
+    @POST("auth/sendPasswordResetOtp")
+    suspend fun sendPasswordResetOtp(@Body request: SendPasswordResetOtpRequest): Response<BaseResponse>
+
+    @POST("auth/verifyPasswordResetOtp")
+    suspend fun verifyPasswordResetOtp(@Body request: VerifyPasswordResetOtpRequest): Response<VerifyPasswordResetOtpResponse>
+
+    @POST("auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): Response<BaseResponse>
+
     @POST("auth/logout")
     suspend fun logout(): Response<BaseResponse>
 

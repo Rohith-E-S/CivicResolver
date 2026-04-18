@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -37,8 +39,10 @@ fun UserDashboardScreen(
     val state by viewModel.state.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
     var isRefreshing by remember { mutableStateOf(false) }
+    var sortOption by remember { mutableStateOf(SortOption.DATE_DESC) }
+    var showSortMenu by remember { mutableStateOf(false) }
     
-    val pagerState = rememberPagerState(pageCount = { 3 })
+    val pagerState = rememberPagerState(pageCount = { 4 })
     val coroutineScope = rememberCoroutineScope()
 
     val onRefresh = {
@@ -133,6 +137,33 @@ fun UserDashboardScreen(
                         }
                     }
                 )
+
+                Box {
+                    IconButton(onClick = { showSortMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Sort,
+                            contentDescription = "Sort",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Newest First") },
+                            onClick = { sortOption = SortOption.DATE_DESC; showSortMenu = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Oldest First") },
+                            onClick = { sortOption = SortOption.DATE_ASC; showSortMenu = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Highest Rated") },
+                            onClick = { sortOption = SortOption.RATING_DESC; showSortMenu = false }
+                        )
+                    }
+                }
             }
 
             LazyRow(
@@ -167,54 +198,94 @@ fun UserDashboardScreen(
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } }
                     )
                 }
+                item {
+                    StatCard(
+                        title = "Analytics",
+                        count = "Charts",
+                        color = MaterialTheme.colorScheme.outline,
+                        isSelected = pagerState.currentPage == 3,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } }
+                    )
+                }
             }
 
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.weight(1f)
             ) { page ->
-                val list = when (page) {
-                    0 -> state.newComplaints
-                    1 -> state.inProgressComplaints
-                    2 -> state.resolvedComplaints
-                    else -> emptyList()
-                }
-
-                val filteredList = if (searchQuery.isBlank()) {
-                    list
-                } else {
-                    list.filter {
-                        it.category.contains(searchQuery, ignoreCase = true) ||
-                        it.city.contains(searchQuery, ignoreCase = true) ||
-                        it.description.contains(searchQuery, ignoreCase = true)
-                    }
-                }
-
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = onRefresh,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                if (page == 3) {
+                    val allComplaints = state.newComplaints + state.inProgressComplaints + state.resolvedComplaints
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        if (filteredList.isEmpty() && !state.isLoading) {
-                            item {
-                                Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text("No complaints found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Complaints by Status", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        StatusBarChart(state.newComplaints.size, state.inProgressComplaints.size, state.resolvedComplaints.size)
+                        
+                        Text("Complaints by Category", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        if (allComplaints.isNotEmpty()) {
+                            CategoryPieChart(allComplaints)
                         } else {
-                            items(filteredList) { complaint ->
-                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                    ComplaintCard(
-                                        complaint = complaint,
-                                        isAdmin = false,
-                                        onClick = { onNavigateToDetail(complaint.id) },
-                                        onUpdateStatusClick = {}
-                                    )
+                            Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                Text("No data for pie chart", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                } else {
+                    val list = when (page) {
+                        0 -> state.newComplaints
+                        1 -> state.inProgressComplaints
+                        2 -> state.resolvedComplaints
+                        else -> emptyList()
+                    }
+
+                    val filteredList = if (searchQuery.isBlank()) {
+                        list
+                    } else {
+                        list.filter {
+                            it.category.contains(searchQuery, ignoreCase = true) ||
+                            it.city.contains(searchQuery, ignoreCase = true) ||
+                            it.description.contains(searchQuery, ignoreCase = true)
+                        }
+                    }.let {
+                        when (sortOption) {
+                            SortOption.DATE_DESC -> it.sortedByDescending { item -> item.createdAt }
+                            SortOption.DATE_ASC -> it.sortedBy { item -> item.createdAt }
+                            SortOption.RATING_DESC -> it.sortedByDescending { item -> item.rating }
+                        }
+                    }
+
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = onRefresh,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            if (filteredList.isEmpty() && !state.isLoading) {
+                                item {
+                                    Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text("No complaints found.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            } else {
+                                items(filteredList) { complaint ->
+                                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                        ComplaintCard(
+                                            complaint = complaint,
+                                            isAdmin = false,
+                                            onClick = { onNavigateToDetail(complaint.id) },
+                                            onUpdateStatusClick = {}
+                                        )
+                                    }
                                 }
                             }
                         }

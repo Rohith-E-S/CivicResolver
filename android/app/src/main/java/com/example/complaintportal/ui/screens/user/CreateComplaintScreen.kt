@@ -2,6 +2,7 @@ package com.example.complaintportal.ui.screens.user
 
 import com.example.complaintportal.ui.screens.*
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.net.Uri
@@ -29,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import coil.compose.rememberAsyncImagePainter
@@ -40,6 +42,12 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.osmdroid.config.Configuration
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.events.MapEventsReceiver
+import org.osmdroid.views.overlay.MapEventsOverlay
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
@@ -158,12 +166,39 @@ fun CreateComplaintScreen(
 
     var tempCameraUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
+    val uCropLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val resultUri = com.yalantis.ucrop.UCrop.getOutput(result.data!!)
+            if (resultUri != null) selectedImageUri = resultUri
+        }
+    }
+
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { resultUri ->
-        if (resultUri != null) selectedImageUri = resultUri
+        resultUri?.let {
+            val destinationUri = Uri.fromFile(File(context.cacheDir, "crop_${System.currentTimeMillis()}.jpg"))
+            val options = com.yalantis.ucrop.UCrop.Options().apply {
+                setCompressionQuality(70)
+                setFreeStyleCropEnabled(true)
+            }
+            val intent = com.yalantis.ucrop.UCrop.of(it, destinationUri)
+                .withOptions(options)
+                .getIntent(context)
+            uCropLauncher.launch(intent)
+        }
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-        if (success) selectedImageUri = tempCameraUri
+        if (success && tempCameraUri != null) {
+            val destinationUri = Uri.fromFile(File(context.cacheDir, "crop_${System.currentTimeMillis()}.jpg"))
+            val options = com.yalantis.ucrop.UCrop.Options().apply {
+                setCompressionQuality(70)
+                setFreeStyleCropEnabled(true)
+            }
+            val intent = com.yalantis.ucrop.UCrop.of(tempCameraUri!!, destinationUri)
+                .withOptions(options)
+                .getIntent(context)
+            uCropLauncher.launch(intent)
+        }
     }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -277,18 +312,95 @@ fun CreateComplaintScreen(
             Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(16.dp)) {
                 Column {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Location helps route your complaint.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        Text("Tap map to drop a pin.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = { getLocation() },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
                         ) {
-                            Text("Use current location", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                            Text("Current location", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp)).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))) {
+                        AndroidView(
+                            factory = { ctx ->
+                                Configuration.getInstance().load(ctx, ctx.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+                                MapView(ctx).apply {
+                                    setMultiTouchControls(true)
+                                    val mapController = controller
+                                    mapController.setZoom(15.0)
+                                    
+                                    val startPoint = GeoPoint(20.5937, 78.9629)
+                                    if (lat != "0.0" && lng != "0.0") {
+                                        startPoint.latitude = lat.toDouble()
+                                        startPoint.longitude = lng.toDouble()
+                                    }
+                                    mapController.setCenter(startPoint)
+
+                                    val marker = Marker(this)
+                                    marker.position = startPoint
+                                    marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                    overlays.add(marker)
+
+                                    val mReceive: MapEventsReceiver = object : MapEventsReceiver {
+                                        override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
+                                            marker.position = p
+                                            lat = p.latitude.toString()
+                                            lng = p.longitude.toString()
+                                            invalidate()
+                                            
+                                            locationMessage = "Pin dropped. Fetching details..."
+                                            scope.launch(Dispatchers.IO) {
+                                                try {
+                                                    val geocoder = Geocoder(ctx, Locale.getDefault())
+                                                    @Suppress("DEPRECATION")
+                                                    val addresses = geocoder.getFromLocation(p.latitude, p.longitude, 1)
+                                                    if (!addresses.isNullOrEmpty()) {
+                                                        val address = addresses[0]
+                                                        city = address.locality ?: address.subAdminArea ?: address.adminArea ?: ""
+                                                        userState = address.adminArea ?: ""
+                                                        val extractedLandmark = address.featureName ?: address.thoroughfare ?: address.subLocality ?: ""
+                                                        if (extractedLandmark != city && extractedLandmark != userState) {
+                                                            landmark = extractedLandmark
+                                                        }
+                                                        locationMessage = "Location pinned."
+                                                    } else {
+                                                        locationMessage = "Coordinates fetched. Add details manually."
+                                                    }
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                    locationMessage = "Coordinates fetched. Add details manually."
+                                                }
+                                            }
+                                            return false
+                                        }
+
+                                        override fun longPressHelper(p: GeoPoint): Boolean {
+                                            return false
+                                        }
+                                    }
+                                    overlays.add(MapEventsOverlay(mReceive))
+                                }
+                            },
+                            update = { mapView ->
+                                if (lat != "0.0" && lng != "0.0") {
+                                    val pt = GeoPoint(lat.toDouble(), lng.toDouble())
+                                    mapView.controller.animateTo(pt)
+                                    
+                                    val marker = mapView.overlays.filterIsInstance<Marker>().firstOrNull()
+                                    marker?.position = pt
+                                    mapView.invalidate()
+                                }
+                            }
+                        )
+                    }
+
                     if (locationMessage.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(locationMessage, style = MaterialTheme.typography.labelSmall, color = if (locationMessage.contains("fetched")) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error)
+                        Text(locationMessage, style = MaterialTheme.typography.labelSmall, color = if (locationMessage.contains("fetched") || locationMessage.contains("pinned")) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error)
                     }
                     if (lat != "0.0" && lng != "0.0") {
                         Spacer(modifier = Modifier.height(4.dp))

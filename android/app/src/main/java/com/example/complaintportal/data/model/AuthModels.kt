@@ -55,3 +55,19 @@ data class GoogleLoginRequest(
     val profilePic: String?,
     val googleId: String
 )
+
+@JsonClass(generateAdapter = true)
+data class SendPasswordResetOtpRequest(val email: String)
+
+@JsonClass(generateAdapter = true)
+data class VerifyPasswordResetOtpRequest(val email: String, val otp: String)
+
+@JsonClass(generateAdapter = true)
+data class VerifyPasswordResetOtpResponse(
+    val success: Boolean,
+    val message: String?,
+    val resetToken: String?
+)
+
+@JsonClass(generateAdapter = true)
+data class ResetPasswordRequest(val password: String, val token: String)

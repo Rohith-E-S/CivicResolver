@@ -65,6 +65,9 @@ dependencies {
     implementation(libs.socket.io.client)
     implementation(libs.moshi)
     implementation(libs.moshi.kotlin)
+    implementation(libs.osmdroid.android)
+    implementation(libs.ucrop)
+    implementation(libs.mpandroidchart)
     implementation(libs.play.services.location)
 
     testImplementation(libs.junit)

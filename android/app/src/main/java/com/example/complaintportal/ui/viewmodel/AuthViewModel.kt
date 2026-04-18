@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.complaintportal.data.model.CreateAccountRequest
 import com.example.complaintportal.data.model.GoogleLoginRequest
 import com.example.complaintportal.data.model.LoginRequest
+import com.example.complaintportal.data.model.ResetPasswordRequest
 import com.example.complaintportal.data.model.User
 import com.example.complaintportal.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,8 +27,56 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     private val _authState = MutableStateFlow(AuthState())
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
+    var pendingSignupRequest: CreateAccountRequest? = null
+
     init {
         checkAuth()
+    }
+
+    fun sendOtp(email: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _authState.value = _authState.value.copy(isLoading = true, error = null)
+            val result = repository.sendOtp(email)
+            result.onSuccess { response ->
+                _authState.value = _authState.value.copy(isLoading = false)
+                if (response.success) {
+                    onSuccess()
+                } else {
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        error = response.message ?: "Failed to send OTP"
+                    )
+                }
+            }.onFailure { e ->
+                _authState.value = _authState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Failed to send OTP"
+                )
+            }
+        }
+    }
+
+    fun verifyOtp(email: String, otp: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _authState.value = _authState.value.copy(isLoading = true, error = null)
+            val result = repository.verifyOtp(email, otp)
+            result.onSuccess { response ->
+                _authState.value = _authState.value.copy(isLoading = false)
+                if (response.success) {
+                    onSuccess()
+                } else {
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        error = response.message ?: "Invalid OTP"
+                    )
+                }
+            }.onFailure { e ->
+                _authState.value = _authState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Invalid OTP"
+                )
+            }
+        }
     }
 
     fun checkAuth() {
@@ -132,6 +181,75 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
                 _authState.value = _authState.value.copy(
                     isLoading = false,
                     error = e.message ?: "Signup failed"
+                )
+            }
+        }
+    }
+
+    fun sendPasswordResetOtp(email: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _authState.value = _authState.value.copy(isLoading = true, error = null)
+            val result = repository.sendPasswordResetOtp(email)
+            result.onSuccess { response ->
+                _authState.value = _authState.value.copy(isLoading = false)
+                if (response.success) {
+                    onSuccess()
+                } else {
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        error = response.message ?: "Failed to send OTP"
+                    )
+                }
+            }.onFailure { e ->
+                _authState.value = _authState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Failed to send OTP"
+                )
+            }
+        }
+    }
+
+    fun verifyPasswordResetOtp(email: String, otp: String, onSuccess: (String) -> Unit) {
+        viewModelScope.launch {
+            _authState.value = _authState.value.copy(isLoading = true, error = null)
+            val result = repository.verifyPasswordResetOtp(email, otp)
+            result.onSuccess { response ->
+                _authState.value = _authState.value.copy(isLoading = false)
+                if (response.success) {
+                    onSuccess(response.resetToken ?: "")
+                } else {
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        error = response.message ?: "Invalid OTP"
+                    )
+                }
+            }.onFailure { e ->
+                _authState.value = _authState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Invalid OTP"
+                )
+            }
+        }
+    }
+
+    fun resetPassword(request: ResetPasswordRequest, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _authState.value = _authState.value.copy(isLoading = true, error = null)
+            val result = repository.resetPassword(request)
+            result.onSuccess { response ->
+                _authState.value = _authState.value.copy(isLoading = false)
+                if (response.success) {
+                    onSuccess()
+                } else {
+                    _authState.value = _authState.value.copy(
+                        isLoading = false,
+                        error = response.message ?: "Failed to reset password"
+                    )
+                }
+            }.onFailure { e ->
+                _authState.value = _authState.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Failed to reset password"
                 )
             }
         }

@@ -41,22 +41,40 @@ fun ProfileScreen(
     val user = state.user
     val context = LocalContext.current
 
+    val uCropLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val resultUri = com.yalantis.ucrop.UCrop.getOutput(result.data!!)
+            resultUri?.let {
+                val inputStream = context.contentResolver.openInputStream(it)
+                val uploadFile = File(context.cacheDir, "profile_${System.currentTimeMillis()}.jpg")
+                val outputStream = FileOutputStream(uploadFile)
+                inputStream?.copyTo(outputStream)
+                inputStream?.close()
+                outputStream.close()
+                
+                val requestFile = uploadFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                val imagePart = MultipartBody.Part.createFormData("profilePic", uploadFile.name, requestFile)
+                
+                val fullNameReq = user?.fullName?.toRequestBody("text/plain".toMediaTypeOrNull())
+                val addressReq = user?.address?.toRequestBody("text/plain".toMediaTypeOrNull())
+
+                viewModel.updateProfile(fullNameReq, addressReq, imagePart) {}
+            }
+        }
+    }
+
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
-            val inputStream = context.contentResolver.openInputStream(it)
-            val uploadFile = File(context.cacheDir, "profile_${System.currentTimeMillis()}.jpg")
-            val outputStream = FileOutputStream(uploadFile)
-            inputStream?.copyTo(outputStream)
-            inputStream?.close()
-            outputStream.close()
-            
-            val requestFile = uploadFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
-            val imagePart = MultipartBody.Part.createFormData("profilePic", uploadFile.name, requestFile)
-            
-            val fullNameReq = user?.fullName?.toRequestBody("text/plain".toMediaTypeOrNull())
-            val addressReq = user?.address?.toRequestBody("text/plain".toMediaTypeOrNull())
-
-            viewModel.updateProfile(fullNameReq, addressReq, imagePart) {}
+            val destinationUri = Uri.fromFile(File(context.cacheDir, "crop_${System.currentTimeMillis()}.jpg"))
+            val options = com.yalantis.ucrop.UCrop.Options().apply {
+                setCompressionQuality(80)
+                setCircleDimmedLayer(true)
+            }
+            val intent = com.yalantis.ucrop.UCrop.of(it, destinationUri)
+                .withAspectRatio(1f, 1f)
+                .withOptions(options)
+                .getIntent(context)
+            uCropLauncher.launch(intent)
         }
     }
 
@@ -66,7 +84,7 @@ fun ProfileScreen(
                 title = { Text("CivicResolve", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primaryContainer) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
