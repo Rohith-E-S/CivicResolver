@@ -40,7 +40,7 @@ fun AdminDashboardScreen(
     var sortOption by remember { mutableStateOf(SortOption.DATE_DESC) }
     var showSortMenu by remember { mutableStateOf(false) }
 
-    val pagerState = rememberPagerState(pageCount = { 3 })
+    val pagerState = rememberPagerState(pageCount = { 4 })
     val coroutineScope = rememberCoroutineScope()
 
     val onRefresh = {
@@ -185,6 +185,15 @@ fun AdminDashboardScreen(
                         color = MaterialTheme.colorScheme.secondary,
                         isSelected = pagerState.currentPage == 2,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } }
+                    )
+                }
+                item {
+                    StatCard(
+                        title = "Analytics",
+                        count = "Charts",
+                        color = MaterialTheme.colorScheme.outline,
+                        isSelected = pagerState.currentPage == 3,
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } }
                     )
                 }
             }
