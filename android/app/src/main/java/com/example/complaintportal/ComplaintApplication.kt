@@ -61,7 +61,7 @@ class ComplaintApplication : Application() {
 
                             if (globalSocket == null) {
                                 val opts = IO.Options().apply { auth = mapOf("token" to token) }
-                                globalSocket = IO.socket("https://nonadjacent-unsurnamed-lizabeth.ngrok-free.dev", opts)
+                                globalSocket = IO.socket(container.socketUrl, opts)
                                 
                                 globalSocket?.on("newMessage") { args ->
                                     if (args.isNotEmpty()) {

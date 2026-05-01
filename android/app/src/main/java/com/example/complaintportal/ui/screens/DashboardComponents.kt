@@ -113,23 +113,25 @@ fun StatCard(
     isSelected: Boolean = false,
     onClick: () -> Unit = {}
 ) {
-    val borderColor = if (isSelected) color else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
-    val backgroundColor = if (isSelected) color.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
+    val backgroundColor = if (isSelected) color.copy(alpha = 0.2f) else color.copy(alpha = 0.05f)
+    val contentColor = if (isSelected) color else color.copy(alpha = 0.8f)
 
     Row(
         modifier = Modifier
             .clip(CircleShape)
             .background(backgroundColor)
-            .border(if (isSelected) 2.dp else 1.dp, borderColor, CircleShape)
+            .then(if (isSelected) Modifier.border(1.5.dp, color, CircleShape) else Modifier)
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(title, style = MaterialTheme.typography.labelMedium, color = if (isSelected) color else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
-        Text(count, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (isSelected) color else MaterialTheme.colorScheme.onSurface)
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(contentColor))
+        Text(title, style = MaterialTheme.typography.labelLarge, color = contentColor, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
+        Text(count, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold, color = contentColor)
     }
 }
+
 
 @Composable
 fun AnimatedLikeButton(
@@ -211,7 +213,13 @@ fun ShimmerComplaintCard() {
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun ComplaintCard(complaint: Complaint, isAdmin: Boolean, onClick: () -> Unit, onUpdateStatusClick: () -> Unit) {
+fun ComplaintCard(
+    complaint: Complaint, 
+    isAdmin: Boolean, 
+    onClick: () -> Unit, 
+    onUpdateStatusClick: () -> Unit,
+    showCommunityFeatures: Boolean = false
+) {
     val sharedTransitionScope = com.example.complaintportal.ui.navigation.LocalSharedTransitionScope.current
     val animatedVisibilityScope = com.example.complaintportal.ui.navigation.LocalNavAnimatedVisibilityScope.current
 
@@ -354,23 +362,23 @@ fun ComplaintCard(complaint: Complaint, isAdmin: Boolean, onClick: () -> Unit, o
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             
-                            // Mocking state just for the like button micro-interaction showcase
-                            var isLiked by remember { mutableStateOf(complaint.rating > 0) }
-                            var likeCount by remember { mutableStateOf(complaint.rating) }
-                            
-//                            AnimatedLikeButton(
-//                                isLiked = isLiked,
-//                                likeCount = likeCount,
-//                                onLikeClick = {
-//                                    if (isLiked) {
-//                                        likeCount--
-//                                        isLiked = false
-//                                    } else {
-//                                        likeCount++
-//                                        isLiked = true
-//                                    }
-//                                }
-//                            )
+                            if (showCommunityFeatures) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Favorite,
+                                        contentDescription = "Support",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "${(10..99).random()} people support",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
                         }
                     }
                 }

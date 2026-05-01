@@ -24,7 +24,8 @@ data class MessageState(
 class MessageViewModel(
     private val repository: MessageRepository,
     private val cookieJar: com.example.complaintportal.data.remote.CookieJarImpl,
-    private val moshi: Moshi
+    private val moshi: Moshi,
+    private val socketUrl: String
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MessageState())
@@ -40,7 +41,7 @@ class MessageViewModel(
             val token = cookieJar.getToken()
             val opts = IO.Options()
             opts.auth = mapOf("token" to token)
-            socket = IO.socket("https://nonadjacent-unsurnamed-lizabeth.ngrok-free.dev", opts)
+            socket = IO.socket(socketUrl, opts)
             
             socket?.on(Socket.EVENT_CONNECT) {
                 socket?.emit("joinComplaint", complaintId)
@@ -113,12 +114,13 @@ class MessageViewModel(
 class MessageViewModelFactory(
     private val repository: MessageRepository,
     private val cookieJar: com.example.complaintportal.data.remote.CookieJarImpl,
-    private val moshi: Moshi
+    private val moshi: Moshi,
+    private val socketUrl: String
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MessageViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MessageViewModel(repository, cookieJar, moshi) as T
+            return MessageViewModel(repository, cookieJar, moshi, socketUrl) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -62,7 +62,12 @@ fun AppNavigation(
         factory = ComplaintViewModelFactory(appContainer.complaintRepository)
     )
     val messageViewModel: MessageViewModel = viewModel(
-        factory = MessageViewModelFactory(appContainer.messageRepository, appContainer.cookieJar, appContainer.moshi)
+        factory = MessageViewModelFactory(
+            appContainer.messageRepository, 
+            appContainer.cookieJar, 
+            appContainer.moshi,
+            appContainer.socketUrl
+        )
     )
 
     val authState by authViewModel.authState.collectAsState()
