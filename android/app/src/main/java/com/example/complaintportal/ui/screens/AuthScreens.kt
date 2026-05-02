@@ -132,7 +132,7 @@ fun PremiumAuthTextField(
     val borderColor by animateColorAsState(
         targetValue = when {
             isError -> Color(0xFFD32F2F) // Crimson Red
-            isValid -> Color(0xFF388E3C) // Emerald Green
+            isValid -> Color(0xFF4CAF50) // Emerald Green
             else -> Color.White.copy(alpha = 0.3f)
         },
         label = "borderColor"
@@ -149,12 +149,12 @@ fun PremiumAuthTextField(
                 placeholder, 
                 color = Color.White.copy(alpha = 0.6f), 
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Normal // Medium to Normal for labels
             ) 
         },
         leadingIcon = leadingIcon,
         trailingIcon = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
                 if (isValid) {
                     Icon(
                         Icons.Rounded.CheckCircle, 
@@ -179,7 +179,7 @@ fun PremiumAuthTextField(
             unfocusedTextColor = Color.White,
             cursorColor = Color.White
         ),
-        textStyle = LocalTextStyle.current.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        textStyle = LocalTextStyle.current.copy(fontSize = 16.sp, fontWeight = FontWeight.Medium)
     )
 }
 
@@ -201,8 +201,8 @@ fun PremiumAuthButton(
                 scope.launch {
                     scale.animateTo(0.95f, tween(100))
                     scale.animateTo(1f, spring(Spring.DampingRatioMediumBouncy))
+                    onClick()
                 }
-                onClick()
             }
         },
         modifier = Modifier
@@ -230,8 +230,8 @@ fun PremiumAuthButton(
                 .fillMaxSize()
                 .background(
                     if (enabled) Brush.horizontalGradient(
-                        colors = listOf(Color(0xFF00325B), Color(0xFF2196F3))
-                    ) else Brush.linearGradient(listOf(Color.Gray, Color.Gray))
+                        colors = listOf(Color(0xFF00796B), Color(0xFF00ACC1)) // Vibrant Teal/Blue Gradient
+                    ) else Brush.linearGradient(listOf(Color.Gray.copy(alpha=0.5f), Color.Gray.copy(alpha=0.5f)))
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -251,7 +251,7 @@ fun PremiumAuthButton(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
-                        Icons.Rounded.ArrowForward, 
+                        Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null, 
                         modifier = Modifier.size(18.dp),
                         tint = Color.White
@@ -274,7 +274,9 @@ fun PremiumGoogleButton(onClick: () -> Unit) {
         border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
     ) {
         Row(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp), // Added padding for the logo
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -476,13 +478,18 @@ fun LoginScreen(
             ) {
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Hero Identity: Civic Shield
+            // Hero Identity: Civic Shield with Polish Glow
             Box(
                 modifier = Modifier
                     .size(100.dp)
+                    .graphicsLayer {
+                        shadowElevation = 20f
+                        shape = CircleShape
+                        clip = false
+                    }
                     .background(
                         Brush.radialGradient(
-                            colors = listOf(Color(0xFF2196F3).copy(alpha = 0.4f), Color.Transparent)
+                            colors = listOf(Color(0xFF64B5F6).copy(alpha = 0.6f), Color.Transparent)
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -543,6 +550,7 @@ fun LoginScreen(
                         onValueChange = { password = it },
                         placeholder = "Password",
                         leadingIcon = { Icon(Icons.Rounded.Lock, contentDescription = null, tint = Color.White.copy(alpha = 0.6f)) },
+                        isValid = password.length >= 6,
                         trailingIcon = {
                             val icon = if (passwordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -630,7 +638,8 @@ fun SignupScreen(
     var passwordVisible by remember { mutableStateOf(false) }
 
     val isEmailValid by remember { derivedStateOf { email.contains("@") && email.contains(".") } }
-    val isFormValid by remember { derivedStateOf { fullName.isNotBlank() && isEmailValid && password.length >= 6 && address.isNotBlank() } }
+    val isPasswordValid by remember { derivedStateOf { password.length >= 6 } }
+    val isFormValid by remember { derivedStateOf { fullName.isNotBlank() && isEmailValid && isPasswordValid && address.isNotBlank() } }
 
     val context = LocalContext.current
     val webClientId = remember(context) { context.getString(R.string.google_web_client_id).trim() }
@@ -638,6 +647,17 @@ fun SignupScreen(
     val scope = rememberCoroutineScope()
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     var isFetchingLocation by remember { mutableStateOf(false) }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
 
     var launchedWithIdToken by remember { mutableStateOf(false) }
     var retryWithoutIdToken by remember { mutableStateOf(false) }
@@ -706,13 +726,18 @@ fun SignupScreen(
             ) {
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Hero Identity: Civic Shield
+            // Hero Identity: Civic Shield with Polish Glow
             Box(
                 modifier = Modifier
                     .size(80.dp)
+                    .graphicsLayer {
+                        shadowElevation = 15f
+                        shape = CircleShape
+                        clip = false
+                    }
                     .background(
                         Brush.radialGradient(
-                            colors = listOf(Color(0xFF4CAF50).copy(alpha = 0.4f), Color.Transparent)
+                            colors = listOf(Color(0xFF81C784).copy(alpha = 0.6f), Color.Transparent)
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -742,12 +767,20 @@ fun SignupScreen(
                 }
             }
 
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.7f),
-                fontWeight = FontWeight.Medium
-            )
+            AnimatedContent(
+                targetState = subtitle,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(600)) togetherWith fadeOut(animationSpec = tween(600))
+                },
+                label = "subtitleFade"
+            ) { targetText ->
+                Text(
+                    targetText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Medium
+                )
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -790,7 +823,13 @@ fun SignupScreen(
                         leadingIcon = { Icon(Icons.Rounded.LocationOn, contentDescription = null, tint = Color.White.copy(alpha = 0.6f)) },
                         trailingIcon = {
                             if (isFetchingLocation) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                                CircularProgressIndicator(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .graphicsLayer { alpha = pulseAlpha }, 
+                                    strokeWidth = 2.dp, 
+                                    color = Color(0xFF2196F3) // Vibrant Pulse Blue
+                                )
                             } else {
                                 IconButton(onClick = {
                                     if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -816,6 +855,7 @@ fun SignupScreen(
                         onValueChange = { password = it },
                         placeholder = "Security Password",
                         leadingIcon = { Icon(Icons.Rounded.Lock, contentDescription = null, tint = Color.White.copy(alpha = 0.6f)) },
+                        isValid = isPasswordValid,
                         trailingIcon = {
                             val icon = if (passwordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
