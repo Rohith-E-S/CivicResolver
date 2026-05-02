@@ -346,6 +346,10 @@ fun UserDashboardScreen(
                 )
             }
 
+            val newCount = if (selectedTab == 0) state.newComplaints.size else state.communityComplaints.count { it.status.lowercase() == "new" }
+            val activeCount = if (selectedTab == 0) state.inProgressComplaints.size else state.communityComplaints.count { it.status.lowercase() == "in progress" }
+            val resolvedCount = if (selectedTab == 0) state.resolvedComplaints.size else state.communityComplaints.count { it.status.lowercase() == "resolved" }
+
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -354,7 +358,7 @@ fun UserDashboardScreen(
                 item {
                     StatCard(
                         title = "New",
-                        count = state.newComplaints.size.toString(),
+                        count = newCount.toString(),
                         color = Color(0xFFE57373),
                         isSelected = pagerState.currentPage == 0,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(0) } }
@@ -363,7 +367,7 @@ fun UserDashboardScreen(
                 item {
                     StatCard(
                         title = "Active",
-                        count = state.inProgressComplaints.size.toString(),
+                        count = activeCount.toString(),
                         color = Color(0xFFFFB74D),
                         isSelected = pagerState.currentPage == 1,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(1) } }
@@ -372,7 +376,7 @@ fun UserDashboardScreen(
                 item {
                     StatCard(
                         title = "Resolved",
-                        count = state.resolvedComplaints.size.toString(),
+                        count = resolvedCount.toString(),
                         color = Color(0xFF81C784),
                         isSelected = pagerState.currentPage == 2,
                         onClick = { coroutineScope.launch { pagerState.animateScrollToPage(2) } }
@@ -425,7 +429,15 @@ fun UserDashboardScreen(
                     }
                     
                     val displayList = if (selectedTab == 0) list else {
-                        state.communityComplaints
+                        val status = when (page) {
+                            0 -> "new"
+                            1 -> "in progress"
+                            2 -> "resolved"
+                            else -> "all"
+                        }
+                        state.communityComplaints.filter { 
+                            status == "all" || it.status.lowercase() == status
+                        }
                     }
 
                     @OptIn(ExperimentalMaterial3Api::class)

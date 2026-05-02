@@ -24,8 +24,8 @@ const haversineDistanceKm = (lat1, lon1, lat2, lon2) => {
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) ** 2;
+    Math.cos(toRadians(lat2)) *
+    Math.sin(dLon / 2) ** 2;
 
   return earthRadiusKm * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 };
@@ -48,6 +48,22 @@ export const createComplaint = async (req, res) => {
         success: false,
         message: "All details are required",
       });
+    }
+
+    const homeDistrict = req.user?.homeDistrict || "";
+    if (homeDistrict.trim() !== "") {
+      const isWithinBounds =
+        city.toLowerCase().includes(homeDistrict.toLowerCase()) ||
+        state.toLowerCase().includes(homeDistrict.toLowerCase()) ||
+        homeDistrict.toLowerCase().includes(city.toLowerCase()) ||
+        homeDistrict.toLowerCase().includes(landmark.toLowerCase());
+
+      if (!isWithinBounds) {
+        return res.status(403).json({
+          success: false,
+          message: `Out of Bounds: You are currently outside your home district (${homeDistrict}). You can only report issues for your local community.`,
+        });
+      }
     }
 
     let beforeImageUrl = "";
@@ -671,32 +687,6 @@ export const rateComplaint = async (req, res) => {
   }
 };
 
-// Get Public Complaint Stats (Total counts only)
-export const getPublicStats = async (req, res) => {
-  try {
-    const totalResolved = await Complaint.countDocuments({
-      status: "resolved",
-      ...ACTIVE_COMPLAINT_QUERY,
-    });
-    const totalActive = await Complaint.countDocuments({
-      status: { $in: ["new", "in progress"] },
-      ...ACTIVE_COMPLAINT_QUERY,
-    });
-
-    res.status(200).json({
-      success: true,
-      stats: {
-        totalResolved,
-        totalActive,
-      },
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `Error fetching public stats: ${error.message}`,
-    });
-  }
-};
 
 // Get Complaint Stats - ADMIN
 export const getComplaintStats = async (req, res) => {
