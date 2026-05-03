@@ -40,6 +40,7 @@ import kotlinx.coroutines.launch
 fun UserDashboardScreen(
     viewModel: ComplaintViewModel,
     userName: String,
+    userId: String,
     district: String? = null,
     onNavigateToCreate: () -> Unit,
     onNavigateToDetail: (String) -> Unit
@@ -59,10 +60,10 @@ fun UserDashboardScreen(
     val onRefresh = {
         if (selectedTab == 1) {
             val scope = if (communityTabScope == 0) (district ?: "all") else "all"
-            viewModel.fetchCommunityFeed(scope)
+            viewModel.fetchCommunityFeed(scope, userId)
             viewModel.fetchPublicStats(scope)
         } else {
-            viewModel.fetchUserComplaints()
+            viewModel.fetchUserComplaints(userId)
             viewModel.fetchPublicStats()
         }
     }
@@ -70,10 +71,10 @@ fun UserDashboardScreen(
     LaunchedEffect(selectedTab, communityTabScope) {
         if (selectedTab == 1) {
             val scope = if (communityTabScope == 0) (district ?: "all") else "all"
-            viewModel.fetchCommunityFeed(scope)
+            viewModel.fetchCommunityFeed(scope, userId)
             viewModel.fetchPublicStats(scope)
         } else {
-            viewModel.fetchUserComplaints() // Added this
+            viewModel.fetchUserComplaints(userId) // Added this
             viewModel.fetchPublicStats()
         }
     }

@@ -197,6 +197,7 @@ fun AppNavigation(
                         if (authState.user?.isAdmin == true) {
                             AdminDashboardScreen(
                                 viewModel = complaintViewModel,
+                                userId = authState.user.id,
                                 onNavigateToDetail = { complaintId -> 
                                     if (complaintId == "profile") {
                                         navController.navigate(Screen.Profile.route)
@@ -209,6 +210,7 @@ fun AppNavigation(
                             UserDashboardScreen(
                                 viewModel = complaintViewModel,
                                 userName = authState.user?.fullName ?: "Citizen",
+                                userId = authState.user?.id ?: "",
                                 district = authState.detectedDistrict,
                                 onNavigateToCreate = { navController.navigate(Screen.CreateComplaint.route) },
                                 onNavigateToDetail = { complaintId -> 
@@ -256,6 +258,7 @@ fun AppNavigation(
                         AdminComplaintDetailScreen(
                             viewModel = complaintViewModel,
                             complaintId = complaintId,
+                            userId = authState.user.id,
                             onNavigateBack = { navController.popBackStack() },
                             onNavigateToChat = { id -> navController.navigate(Screen.Chat.createRoute(id)) }
                         )
@@ -263,6 +266,7 @@ fun AppNavigation(
                         UserComplaintDetailScreen(
                             viewModel = complaintViewModel,
                             complaintId = complaintId,
+                            userId = authState.user?.id ?: "",
                             onNavigateBack = { navController.popBackStack() },
                             onNavigateToChat = { id -> navController.navigate(Screen.Chat.createRoute(id)) }
                         )

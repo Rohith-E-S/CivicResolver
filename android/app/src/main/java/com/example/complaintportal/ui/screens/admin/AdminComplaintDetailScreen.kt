@@ -40,6 +40,7 @@ import com.example.complaintportal.ui.viewmodel.ComplaintViewModel
 fun AdminComplaintDetailScreen(
     viewModel: ComplaintViewModel,
     complaintId: String,
+    userId: String,
     onNavigateBack: () -> Unit,
     onNavigateToChat: (String) -> Unit
 ) {
@@ -60,8 +61,8 @@ fun AdminComplaintDetailScreen(
                 val requestFile = uploadFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
                 val body = MultipartBody.Part.createFormData("imageUrl", uploadFile.name, requestFile)
                 viewModel.uploadAfterImage(complaintId, body) {
-                    viewModel.fetchComplaint(complaintId)
-                    viewModel.fetchAdminComplaints()
+                    viewModel.fetchComplaint(complaintId, userId)
+                    viewModel.fetchAdminComplaints(userId)
                 }
             }
         }
@@ -82,7 +83,7 @@ fun AdminComplaintDetailScreen(
     }
 
     LaunchedEffect(complaintId) {
-        viewModel.fetchComplaint(complaintId)
+        viewModel.fetchComplaint(complaintId, userId)
     }
 
     val complaint = state.currentComplaint
@@ -214,7 +215,7 @@ fun AdminComplaintDetailScreen(
                                     isSupported = state.supportedIds.contains(complaint.id),
                                     onSupportClick = {
                                         viewModel.supportComplaint(complaint.id) {
-                                            viewModel.fetchComplaint(complaint.id)
+                                            viewModel.fetchComplaint(complaint.id, userId)
                                         }
                                     },
                                     modifier = Modifier.align(Alignment.TopEnd)
@@ -250,8 +251,8 @@ fun AdminComplaintDetailScreen(
                                 Button(
                                     onClick = { 
                                         viewModel.updateComplaintStatus(complaintId, "in progress") {
-                                            viewModel.fetchComplaint(complaintId)
-                                            viewModel.fetchAdminComplaints()
+                                            viewModel.fetchComplaint(complaintId, userId)
+                                            viewModel.fetchAdminComplaints(userId)
                                         }
                                     },
                                     modifier = Modifier.weight(1f),

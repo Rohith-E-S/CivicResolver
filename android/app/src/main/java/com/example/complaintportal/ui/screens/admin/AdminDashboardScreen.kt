@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AdminDashboardScreen(
     viewModel: ComplaintViewModel,
+    userId: String,
     onNavigateToDetail: (String) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
@@ -49,7 +50,7 @@ fun AdminDashboardScreen(
 
     val onRefresh = {
         isRefreshing = true
-        viewModel.fetchAdminComplaints()
+        viewModel.fetchAdminComplaints(userId)
     }
 
     LaunchedEffect(state.isLoading) {
@@ -59,7 +60,7 @@ fun AdminDashboardScreen(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.fetchAdminComplaints()
+        viewModel.fetchAdminComplaints(userId)
     }
 
     Scaffold(

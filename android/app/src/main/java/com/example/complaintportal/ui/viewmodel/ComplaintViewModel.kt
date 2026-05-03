@@ -31,24 +31,25 @@ class ComplaintViewModel(private val repository: ComplaintRepository) : ViewMode
     private val _state = MutableStateFlow(ComplaintState())
     val state: StateFlow<ComplaintState> = _state.asStateFlow()
 
-    fun fetchUserComplaints() {
+    fun fetchUserComplaints(userId: String? = null) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             val result = repository.getMyComplaints()
             result.onSuccess { response ->
                 if (response.success) {
                     val complaints = response.complaints ?: emptyList()
-                    val supportedIds = _state.value.supportedIds
                     
-                    val processedComplaints = complaints.map { 
-                        if (it.id in supportedIds && (it.supportCount ?: 0) == 0) it.copy(supportCount = 1) else it
-                    }
-
+                    // Extract supported IDs from the complaints themselves if userId is provided
+                    val newSupportedIds = if (userId != null) {
+                        complaints.filter { it.supporters?.contains(userId) == true }.map { it.id }.toSet()
+                    } else emptySet()
+                    
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        newComplaints = processedComplaints.filter { it.status.lowercase() == "new" },
-                        inProgressComplaints = processedComplaints.filter { it.status.lowercase() == "in progress" },
-                        resolvedComplaints = processedComplaints.filter { it.status.lowercase() == "resolved" }
+                        supportedIds = _state.value.supportedIds + newSupportedIds,
+                        newComplaints = complaints.filter { it.status.lowercase() == "new" },
+                        inProgressComplaints = complaints.filter { it.status.lowercase() == "in progress" },
+                        resolvedComplaints = complaints.filter { it.status.lowercase() == "resolved" }
                     )
                 } else {
                     _state.value = _state.value.copy(isLoading = false, error = response.message)
@@ -59,26 +60,28 @@ class ComplaintViewModel(private val repository: ComplaintRepository) : ViewMode
         }
     }
 
-    fun fetchAdminComplaints() {
+    fun fetchAdminComplaints(userId: String? = null) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             val result = repository.getAllComplaints()
             result.onSuccess { response ->
                 if (response.success) {
                     val data = response.complaints
-                    val supportedIds = _state.value.supportedIds
-                    
-                    val process = { list: List<Complaint>? ->
-                        list?.map { 
-                            if (it.id in supportedIds && (it.supportCount ?: 0) == 0) it.copy(supportCount = 1) else it
-                        } ?: emptyList()
-                    }
+                    val allComplaints = (data?.newComplaint ?: emptyList()) + 
+                                       (data?.inProgressComplaint ?: emptyList()) + 
+                                       (data?.resolvedComplaint ?: emptyList())
+
+                    // Extract supported IDs
+                    val newSupportedIds = if (userId != null) {
+                        allComplaints.filter { it.supporters?.contains(userId) == true }.map { it.id }.toSet()
+                    } else emptySet()
 
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        newComplaints = process(data?.newComplaint),
-                        inProgressComplaints = process(data?.inProgressComplaint),
-                        resolvedComplaints = process(data?.resolvedComplaint)
+                        supportedIds = _state.value.supportedIds + newSupportedIds,
+                        newComplaints = data?.newComplaint ?: emptyList(),
+                        inProgressComplaints = data?.inProgressComplaint ?: emptyList(),
+                        resolvedComplaints = data?.resolvedComplaint ?: emptyList()
                     )
                 } else {
                     _state.value = _state.value.copy(isLoading = false, error = response.message)
@@ -117,18 +120,21 @@ class ComplaintViewModel(private val repository: ComplaintRepository) : ViewMode
         }
     }
 
-    fun fetchComplaint(id: String) {
+    fun fetchComplaint(id: String, userId: String? = null) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             val result = repository.getComplaint(id)
             result.onSuccess { response ->
                 if (response.success) {
-                    var complaint = response.complaint
-                    if (complaint != null && complaint.id in _state.value.supportedIds) {
-                        if ((complaint.supportCount ?: 0) == 0) {
-                            complaint = complaint.copy(supportCount = 1)
-                        }
+                    val complaint = response.complaint
+                    
+                    // Update supportedIds if user is a supporter
+                    if (complaint != null && userId != null && complaint.supporters?.contains(userId) == true) {
+                        _state.value = _state.value.copy(
+                            supportedIds = _state.value.supportedIds + complaint.id
+                        )
                     }
+                    
                     _state.value = _state.value.copy(isLoading = false, currentComplaint = complaint)
                 } else {
                     _state.value = _state.value.copy(isLoading = false, error = response.message)
@@ -250,22 +256,23 @@ class ComplaintViewModel(private val repository: ComplaintRepository) : ViewMode
         }
     }
 
-    fun fetchCommunityFeed(district: String? = null) {
+    fun fetchCommunityFeed(district: String? = null, userId: String? = null) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isCommunityLoading = true)
             val result = repository.getPublicFeed(district)
             result.onSuccess { response ->
                 if (response.success) {
                     val complaints = response.complaints ?: emptyList()
-                    val supportedIds = _state.value.supportedIds
                     
-                    val processed = complaints.map { 
-                        if (it.id in supportedIds && (it.supportCount ?: 0) == 0) it.copy(supportCount = 1) else it
-                    }
+                    // Extract supported IDs
+                    val newSupportedIds = if (userId != null) {
+                        complaints.filter { it.supporters?.contains(userId) == true }.map { it.id }.toSet()
+                    } else emptySet()
 
                     _state.value = _state.value.copy(
                         isCommunityLoading = false,
-                        communityComplaints = processed
+                        supportedIds = _state.value.supportedIds + newSupportedIds,
+                        communityComplaints = complaints
                     )
                 } else {
                     _state.value = _state.value.copy(isCommunityLoading = false, error = response.message)

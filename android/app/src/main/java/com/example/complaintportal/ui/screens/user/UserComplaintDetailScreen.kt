@@ -37,6 +37,7 @@ import com.example.complaintportal.ui.viewmodel.ComplaintViewModel
 fun UserComplaintDetailScreen(
     viewModel: ComplaintViewModel,
     complaintId: String,
+    userId: String,
     onNavigateBack: () -> Unit,
     onNavigateToChat: (String) -> Unit
 ) {
@@ -45,7 +46,7 @@ fun UserComplaintDetailScreen(
     var showZoomDialog by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(complaintId) {
-        viewModel.fetchComplaint(complaintId)
+        viewModel.fetchComplaint(complaintId, userId)
     }
 
     val complaint = state.currentComplaint
@@ -175,7 +176,7 @@ fun UserComplaintDetailScreen(
                                     onSupportClick = {
                                         if (complaint.id != null) {
                                             viewModel.supportComplaint(complaint.id) {
-                                                viewModel.fetchComplaint(complaint.id)
+                                                viewModel.fetchComplaint(complaint.id, userId)
                                             }
                                         }
                                     },
