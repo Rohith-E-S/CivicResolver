@@ -37,7 +37,7 @@ fun ChatScreen(
     var messageText by remember { mutableStateOf("") }
 
     LaunchedEffect(complaintId) {
-        complaintViewModel.fetchComplaint(complaintId)
+        complaintViewModel.fetchComplaint(complaintId, currentUserId)
         messageViewModel.connectSocket(complaintId)
         messageViewModel.loadMessages(complaintId)
     }

@@ -37,6 +37,7 @@ import com.example.complaintportal.ui.viewmodel.ComplaintViewModel
 fun UserComplaintDetailScreen(
     viewModel: ComplaintViewModel,
     complaintId: String,
+    userId: String,
     onNavigateBack: () -> Unit,
     onNavigateToChat: (String) -> Unit
 ) {
@@ -45,7 +46,7 @@ fun UserComplaintDetailScreen(
     var showZoomDialog by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(complaintId) {
-        viewModel.fetchComplaint(complaintId)
+        viewModel.fetchComplaint(complaintId, userId)
     }
 
     val complaint = state.currentComplaint
@@ -94,10 +95,15 @@ fun UserComplaintDetailScreen(
                             .padding(end = 16.dp)
                             .size(32.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                            .background(androidx.compose.ui.graphics.Color(0xFF1A3A6E)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Person, contentDescription = "Profile", tint = MaterialTheme.colorScheme.outline)
+                        Text(
+                            text = "U",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = androidx.compose.ui.graphics.Color.White
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background.copy(alpha=0.8f))
@@ -175,7 +181,7 @@ fun UserComplaintDetailScreen(
                                     onSupportClick = {
                                         if (complaint.id != null) {
                                             viewModel.supportComplaint(complaint.id) {
-                                                viewModel.fetchComplaint(complaint.id)
+                                                viewModel.fetchComplaint(complaint.id, userId)
                                             }
                                         }
                                     },

@@ -19,6 +19,7 @@ data class Complaint(
     val status: String,
     val rating: Int,
     val supportCount: Int? = 0,
+    val supporters: List<String>? = emptyList(),
     val createdAt: String?,
     val updatedAt: String?
 )

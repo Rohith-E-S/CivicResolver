@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -22,6 +23,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import com.example.complaintportal.di.AppContainer
+import com.example.complaintportal.ui.notification.NotificationScreen
+import com.example.complaintportal.ui.notification.NotificationViewModel
+import com.example.complaintportal.ui.notification.NotificationViewModelFactory
 import com.example.complaintportal.ui.screens.*
 import com.example.complaintportal.ui.screens.admin.*
 import com.example.complaintportal.ui.screens.user.*
@@ -33,18 +37,19 @@ val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { nu
 val LocalNavAnimatedVisibilityScope = compositionLocalOf<AnimatedVisibilityScope?> { null }
 
 sealed class Screen(val route: String) {
-    object Splash : Screen("splash")
-    object Login : Screen("login")
-    object Signup : Screen("signup")
-    object OtpVerify : Screen("otp_verify/{email}") {
+    object Splash             : Screen("splash")
+    object Login              : Screen("login")
+    object Signup             : Screen("signup")
+    object OtpVerify          : Screen("otp_verify/{email}") {
         fun createRoute(email: String) = "otp_verify/$email"
     }
-    object ForgotPassword : Screen("forgot_password")
+    object ForgotPassword     : Screen("forgot_password")
     object LocationOnboarding : Screen("location_onboarding")
-    object Dashboard : Screen("dashboard")
-    object Profile : Screen("profile")
-    object CreateComplaint : Screen("create_complaint")
-    object ComplaintDetail : Screen("complaint_detail/{complaintId}") {
+    object Dashboard          : Screen("dashboard")
+    object Profile            : Screen("profile")
+    object CreateComplaint    : Screen("create_complaint")
+    object Notifications      : Screen("notifications")
+    object ComplaintDetail    : Screen("complaint_detail/{complaintId}") {
         fun createRoute(complaintId: String) = "complaint_detail/$complaintId"
     }
     object Chat : Screen("chat/{complaintId}") {
@@ -66,14 +71,47 @@ fun AppNavigation(
     )
     val messageViewModel: MessageViewModel = viewModel(
         factory = MessageViewModelFactory(
-            appContainer.messageRepository, 
-            appContainer.cookieJar, 
+            appContainer.messageRepository,
+            appContainer.cookieJar,
             appContainer.moshi,
             appContainer.socketUrl
         )
     )
 
     val authState by authViewModel.authState.collectAsState()
+
+    // NotificationViewModel — creates its own socket connection for the user's notification room
+    val notificationViewModel: NotificationViewModel? = remember(authState.user?.id) {
+        val uid = authState.user?.id ?: return@remember null
+        val token = appContainer.cookieJar.getToken() ?: return@remember null
+        val opts = io.socket.client.IO.Options().apply { auth = mapOf("token" to token) }
+        val notifSocket = io.socket.client.IO.socket(appContainer.socketUrl, opts)
+        notifSocket.connect()
+        NotificationViewModelFactory(
+            api    = appContainer.notificationApiService,
+            socket = notifSocket,
+            userId = uid,
+        ).create(NotificationViewModel::class.java)
+    }
+
+    // Global Logout Listener: Navigate to Login if session expires or user logs out
+    LaunchedEffect(authState.isAuthenticated) {
+        if (!authState.isAuthenticated && !authState.isChecking) {
+            val currentRoute = navController.currentBackStackEntry?.destination?.route
+            val authRoutes = listOf(
+                Screen.Splash.route,
+                Screen.Login.route,
+                Screen.Signup.route,
+                Screen.OtpVerify.route,
+                Screen.ForgotPassword.route
+            )
+            if (currentRoute != null && currentRoute !in authRoutes) {
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+        }
+    }
 
     SharedTransitionLayout {
             CompositionLocalProvider(
@@ -178,6 +216,7 @@ fun AppNavigation(
                         if (authState.user?.isAdmin == true) {
                             AdminDashboardScreen(
                                 viewModel = complaintViewModel,
+                                userId = authState.user?.id ?: "",
                                 onNavigateToDetail = { complaintId -> 
                                     if (complaintId == "profile") {
                                         navController.navigate(Screen.Profile.route)
@@ -188,15 +227,18 @@ fun AppNavigation(
                             )
                         } else {
                             UserDashboardScreen(
-                                viewModel = complaintViewModel,
-                                userName = authState.user?.fullName ?: "Citizen",
-                                district = authState.detectedDistrict,
-                                onNavigateToCreate = { navController.navigate(Screen.CreateComplaint.route) },
-                                onNavigateToDetail = { complaintId -> 
+                                viewModel             = complaintViewModel,
+                                userName              = authState.user?.fullName ?: "Citizen",
+                                userId                = authState.user?.id ?: "",
+                                district              = authState.detectedDistrict,
+                                notificationViewModel = notificationViewModel,
+                                onNavigateToCreate    = { navController.navigate(Screen.CreateComplaint.route) },
+                                onNavigateToNotifications = { navController.navigate(Screen.Notifications.route) },
+                                onNavigateToDetail = { complaintId ->
                                     if (complaintId == "profile") {
                                         navController.navigate(Screen.Profile.route)
                                     } else {
-                                        navController.navigate(Screen.ComplaintDetail.createRoute(complaintId)) 
+                                        navController.navigate(Screen.ComplaintDetail.createRoute(complaintId))
                                     }
                                 }
                             )
@@ -237,6 +279,7 @@ fun AppNavigation(
                         AdminComplaintDetailScreen(
                             viewModel = complaintViewModel,
                             complaintId = complaintId,
+                            userId = authState.user?.id ?: "",
                             onNavigateBack = { navController.popBackStack() },
                             onNavigateToChat = { id -> navController.navigate(Screen.Chat.createRoute(id)) }
                         )
@@ -244,6 +287,7 @@ fun AppNavigation(
                         UserComplaintDetailScreen(
                             viewModel = complaintViewModel,
                             complaintId = complaintId,
+                            userId = authState.user?.id ?: "",
                             onNavigateBack = { navController.popBackStack() },
                             onNavigateToChat = { id -> navController.navigate(Screen.Chat.createRoute(id)) }
                         )
@@ -264,6 +308,21 @@ fun AppNavigation(
                     isAdmin = authState.user?.isAdmin == true,
                     onNavigateBack = { navController.popBackStack() }
                 )
+            }
+
+            composable(Screen.Notifications.route) {
+                val vm = notificationViewModel
+                if (vm != null) {
+                    NotificationScreen(
+                        viewModel        = vm,
+                        onBack           = { navController.popBackStack() },
+                        onComplaintClick = { complaintId ->
+                            navController.navigate(Screen.ComplaintDetail.createRoute(complaintId))
+                        }
+                    )
+                } else {
+                    navController.popBackStack()
+                }
             }
                 }
             }
