@@ -138,8 +138,10 @@ fun ComplaintCard(
             // Left Side: Image & Status Badge
             Box(
                 modifier = Modifier
-                    .weight(0.4f)
+                    .weight(0.35f)
                     .fillMaxHeight()
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 if (!complaint.beforeImageUrl.isNullOrBlank()) {
@@ -259,15 +261,24 @@ fun ComplaintCard(
                                 )
                             }
                             if (showCommunityFeatures) {
-                                Text(
-                                    text = "${(100..900).random()}m away",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.tertiary,
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
-                                        .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha=0.3f), RoundedCornerShape(4.dp))
-                                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                                )
+                                        .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha=0.2f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "📍",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp)
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(
+                                        text = "${(100..900).random()}m away",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.tertiary
+                                    )
+                                }
                             }
                         }
                         
@@ -423,12 +434,12 @@ fun PriorityUpvoteButton(
     val scale = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
 
-    Column(
+    Row(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(
-                if (isSupported) MaterialTheme.colorScheme.primaryContainer 
-                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                if (isSupported) MaterialTheme.colorScheme.primary 
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
             .clickable {
                 onSupportClick()
@@ -442,19 +453,19 @@ fun PriorityUpvoteButton(
                     }
                 }
             }
-            .padding(vertical = 8.dp, horizontal = 12.dp)
+            .padding(vertical = 6.dp, horizontal = 12.dp)
             .graphicsLayer {
                 scaleX = scale.value
                 scaleY = scale.value
             },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Icon(
             imageVector = Icons.Rounded.KeyboardArrowUp,
             contentDescription = "Upvote",
-            tint = if (isSupported) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(28.dp)
+            tint = if (isSupported) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
         )
         AnimatedContent(
             targetState = count,
@@ -473,9 +484,9 @@ fun PriorityUpvoteButton(
         ) { targetCount ->
             Text(
                 text = "$targetCount",
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp),
                 fontWeight = FontWeight.ExtraBold,
-                color = if (isSupported) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (isSupported) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

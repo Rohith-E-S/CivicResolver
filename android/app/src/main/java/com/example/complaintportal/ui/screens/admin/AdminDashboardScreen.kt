@@ -70,13 +70,19 @@ fun AdminDashboardScreen(
                 actions = {
                     Box(
                         modifier = Modifier
+                            .padding(end = 16.dp)
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(androidx.compose.ui.graphics.Color(0xFF1A3A6E))
                             .clickable { onNavigateToDetail("profile") },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Person, contentDescription = "Profile")
+                        Text(
+                            text = "A",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = androidx.compose.ui.graphics.Color.White
+                        )
                     }
                 }
             )

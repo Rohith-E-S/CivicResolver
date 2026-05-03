@@ -126,15 +126,15 @@ fun UserDashboardScreen(
                             .padding(end = 8.dp)
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .background(Color(0xFF1A3A6E))
                             .clickable { onNavigateToDetail("profile") },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = displayUserName.firstOrNull()?.toString()?.uppercase() ?: "U",
-                            style = MaterialTheme.typography.titleMedium,
+                            text = displayUserName.split(" ").mapNotNull { it.firstOrNull() }.joinToString("").take(2).uppercase(),
+                            style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = Color.White
                         )
                     }
                 },
@@ -161,10 +161,10 @@ fun UserDashboardScreen(
             FloatingActionButton(
                 onClick = onNavigateToCreate,
                 modifier = fabModifier,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                containerColor = Color(0xFF1A3A6E),
+                contentColor = Color.White
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Create Complaint")
+                Icon(Icons.Default.Add, contentDescription = "Create Complaint", modifier = Modifier.size(28.dp))
             }
         }
     ) { padding ->
@@ -180,11 +180,17 @@ fun UserDashboardScreen(
                     Text(" 👋", style = MaterialTheme.typography.headlineSmall)
                 }
                 if (district != null) {
+                    val annotatedString = androidx.compose.ui.text.buildAnnotatedString {
+                        append("Connected to ")
+                        androidx.compose.ui.text.withStyle(androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.ExtraBold)) {
+                            append(district)
+                        }
+                        append(" Civic Portal")
+                    }
                     Text(
-                        text = "Connected to $district Civic Portal",
-                        style = MaterialTheme.typography.labelMedium,
+                        text = annotatedString,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }
@@ -439,31 +445,71 @@ fun UserDashboardScreen(
                     val pullToRefreshState = rememberPullToRefreshState()
                     Column(modifier = Modifier.fillMaxSize()) {
                         if (selectedTab == 1) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                FilterChip(
-                                    selected = communityTabScope == 0,
-                                    onClick = { communityTabScope = 0 },
-                                    label = { Text(if (district != null) "My District" else "My District (not set)") },
-                                    leadingIcon = if (communityTabScope == 0) {
-                                        { Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                                    } else null,
-                                    shape = CircleShape
-                                )
-                                FilterChip(
-                                    selected = communityTabScope == 1,
-                                    onClick = { communityTabScope = 1 },
-                                    label = { Text("Global Feed") },
-                                    leadingIcon = if (communityTabScope == 1) {
-                                        { Icon(Icons.Default.Public, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                                    } else null,
-                                    shape = CircleShape
-                                )
-                            }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                        .height(44.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                        .padding(4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    val inactiveColor = Color.Transparent
+                                    val activeColor = MaterialTheme.colorScheme.surface
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (communityTabScope == 0) activeColor else inactiveColor)
+                                            .clickable { communityTabScope = 0 },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.LocationOn, 
+                                                contentDescription = null, 
+                                                modifier = Modifier.size(16.dp),
+                                                tint = if (communityTabScope == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                if (district != null) "My District" else "Local", 
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = if (communityTabScope == 0) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (communityTabScope == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                            )
+                                        }
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (communityTabScope == 1) activeColor else inactiveColor)
+                                            .clickable { communityTabScope = 1 },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.Public, 
+                                                contentDescription = null, 
+                                                modifier = Modifier.size(16.dp),
+                                                tint = if (communityTabScope == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                "Global Feed", 
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = if (communityTabScope == 1) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (communityTabScope == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                            )
+                                        }
+                                    }
+                                }
                         }
 
                         PullToRefreshBox(
