@@ -1,6 +1,7 @@
 package com.example.complaintportal.di
 
 import android.content.Context
+import com.example.complaintportal.data.notification.NotificationApiService
 import com.example.complaintportal.data.remote.ApiService
 import com.example.complaintportal.data.remote.CookieJarImpl
 import com.example.complaintportal.data.repository.AuthRepository
@@ -17,6 +18,7 @@ interface AppContainer {
     val authRepository: AuthRepository
     val complaintRepository: ComplaintRepository
     val messageRepository: MessageRepository
+    val notificationApiService: NotificationApiService
     val cookieJar: CookieJarImpl
     val moshi: Moshi
     val baseUrl: String
@@ -61,5 +63,9 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val messageRepository: MessageRepository by lazy {
         MessageRepository(retrofitService)
+    }
+
+    override val notificationApiService: NotificationApiService by lazy {
+        retrofit.create(NotificationApiService::class.java)
     }
 }

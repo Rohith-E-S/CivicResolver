@@ -1,6 +1,7 @@
 import cloudinary from "../config/cloudinary.js";
 import Complaint from "../models/complaint.model.js";
 import Message from "../models/message.model.js";
+import User from "../models/user.model.js";
 import fs from "fs";
 import {
   roadKeywords,
@@ -14,6 +15,7 @@ import {
   hasKeyword,
 } from "../config/constants.js";
 import { sendMail } from "../config/email.js";
+import { notifyStatusChanged, notifyNewInDistrict, notifyUpvoted } from "../services/notificationService.js";
 
 const ACTIVE_COMPLAINT_QUERY = { isDeleted: { $ne: true } };
 const toRadians = (degree) => (degree * Math.PI) / 180;
@@ -129,6 +131,29 @@ export const createComplaint = async (req, res) => {
       message: "Complaint submitted successfully",
       complaint: newComplaint,
     });
+
+    // Notify neighbors in the same district
+    try {
+      const io = req.app.get("io");
+      if (io && city) {
+        const neighbors = await User.find({
+          homeDistrict: { $regex: new RegExp(city, "i") },
+          _id: { $ne: req.user._id }
+        }).select("_id");
+        
+        if (neighbors.length > 0) {
+          const neighborIds = neighbors.map(n => n._id);
+          await notifyNewInDistrict(io, {
+            districtUserIds: neighborIds,
+            complaintId: newComplaint._id,
+            category: detectedCategory,
+            district: city
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to notify neighbors:", err.message);
+    }
   } catch (error) {
     console.log(error.message);
     return res.status(500).json({
@@ -363,18 +388,25 @@ export const updateComplaintStatus = async (req, res) => {
     const io = req.app.get("io");
     if (io) {
       if (status === "resolved") {
-        // Notify everyone for global motivation
         io.emit("globalToast", {
           message: `Success! An issue in ${updateComplaint.city} has been resolved!`,
           type: "success"
         });
       }
-      // Notify only room members for standard progress
       io.to(complaintId).emit("statusUpdated", {
         complaintId,
         status: status.toUpperCase()
       });
     }
+
+    // Push in-app notification to complaint owner
+    await notifyStatusChanged(io, {
+      complaintOwnerId: complaint.user,
+      complaintId,
+      oldStatus: complaint.status,
+      newStatus: status,
+      category:  complaint.category,
+    });
 
     res.status(201).json({
       success: true,
@@ -459,6 +491,15 @@ export const updateAfterImageUrl = async (req, res) => {
       });
     }
 
+    // Push in-app notification to complaint owner (fire-and-forget)
+    notifyStatusChanged(io, {
+      complaintOwnerId: complaint.user,
+      complaintId,
+      oldStatus: "in progress",
+      newStatus: "resolved",
+      category:  complaint.category,
+    }).catch(err => console.error("Notification failed:", err.message));
+
     res.status(201).json({
       success: true,
       message: "After Image uploaded successfully",
@@ -531,7 +572,8 @@ export const updateComplaint = async (req, res) => {
       complaint.status = status.toLowerCase();
     }
 
-    // Save updates
+    // Push in-app notification to complaint owner
+    const previousStatus = complaint.status; // captured before save
     await complaint.save();
 
     // Socket broadcasting
@@ -548,6 +590,14 @@ export const updateComplaint = async (req, res) => {
         status: complaint.status.toUpperCase()
       });
     }
+
+    notifyStatusChanged(io, {
+      complaintOwnerId: complaint.user._id,
+      complaintId,
+      oldStatus: previousStatus,
+      newStatus: complaint.status,
+      category:  complaint.category,
+    }).catch(err => console.error("Notification failed:", err.message));
 
     // Send email after resolved
     if (complaint.status === "resolved") {
@@ -1204,6 +1254,21 @@ export const supportComplaint = async (req, res) => {
     complaint.supporters.push(req.user._id);
     complaint.supportCount = complaint.supporters.length;
     await complaint.save();
+
+    // Push in-app notification to complaint owner
+    try {
+      const io = req.app.get("io");
+      if (io) {
+        await notifyUpvoted(io, {
+          complaintOwnerId: complaint.user,
+          complaintId: complaint._id,
+          upvoterName: req.user.fullName,
+          category: complaint.category,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to notify upvote:", err.message);
+    }
 
     return res.status(200).json({
       success: true,

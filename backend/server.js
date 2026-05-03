@@ -8,6 +8,7 @@ import authRouter from "./routes/auth.route.js";
 import { connectDB } from "./config/db.js";
 import complaintRouter from "./routes/complaint.route.js";
 import messageRouter from "./routes/message.route.js";
+import notificationRouter from "./routes/notification.route.js";
 import { socketAuth } from "./middleware/socket.auth.js";
 import Message from "./models/message.model.js";
 
@@ -42,6 +43,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/complaint", complaintRouter);
 app.use("/api/messages", messageRouter);
+app.use("/api/notifications", notificationRouter);
 
 // Set io to app to access in controllers
 app.set("io", io);
@@ -52,6 +54,12 @@ io.use(socketAuth);
 // Socket.IO event handlers
 io.on("connection", (socket) => {
   console.log("User connected:", socket.user.fullName);
+
+  // Join user's personal notification room so targeted emits work
+  socket.on("join_room", (userId) => {
+    socket.join(userId.toString());
+    console.log(`[Socket] ${socket.user.fullName} joined notification room: ${userId}`);
+  });
 
   // Join complaint room
   socket.on("joinComplaint", (complaintId) => {

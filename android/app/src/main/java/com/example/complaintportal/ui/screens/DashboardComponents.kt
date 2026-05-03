@@ -171,12 +171,13 @@ fun ComplaintCard(
                 }
 
                 // Status Badge
-                val statusColor = when (complaint.status.lowercase()) {
+                val statusClean = complaint.status.trim().lowercase()
+                val statusColor = when (statusClean) {
                     "resolved" -> MaterialTheme.colorScheme.secondaryContainer
                     "in progress" -> MaterialTheme.colorScheme.tertiaryContainer
                     else -> MaterialTheme.colorScheme.primaryContainer
                 }
-                val onStatusColor = when (complaint.status.lowercase()) {
+                val onStatusColor = when (statusClean) {
                     "resolved" -> MaterialTheme.colorScheme.onSecondaryContainer
                     "in progress" -> MaterialTheme.colorScheme.onTertiaryContainer
                     else -> MaterialTheme.colorScheme.onPrimaryContainer
@@ -303,11 +304,12 @@ fun ComplaintCard(
                     }
                 }
 
-                if (showCommunityFeatures) {
+                if (showCommunityFeatures || isAdmin) {
                     PriorityUpvoteButton(
                         supportCount = complaint.supportCount ?: 0,
                         onSupportClick = onSupportClick,
                         isSupported = isSupported,
+                        enabled = complaint.status.trim().lowercase() != "resolved" && !isAdmin,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .graphicsLayer {
@@ -424,15 +426,16 @@ fun PriorityUpvoteButton(
     supportCount: Int,
     onSupportClick: () -> Unit,
     isSupported: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     val count by animateIntAsState(
         targetValue = supportCount,
         label = "count"
     )
 
-    val scale = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
+    val scale = remember { Animatable(1f) }
 
     Row(
         modifier = modifier
@@ -441,18 +444,22 @@ fun PriorityUpvoteButton(
                 if (isSupported) MaterialTheme.colorScheme.primary 
                 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
-            .clickable {
-                onSupportClick()
-                scope.launch {
-                    if (!isSupported) {
-                        scale.animateTo(1.2f, tween(100))
-                        scale.animateTo(1f, spring(Spring.DampingRatioMediumBouncy))
-                    } else {
-                        scale.animateTo(0.8f, tween(100))
-                        scale.animateTo(1f, spring(Spring.DampingRatioLowBouncy))
+            .then(
+                if (enabled) {
+                    Modifier.clickable {
+                        onSupportClick()
+                        scope.launch {
+                            if (!isSupported) {
+                                scale.animateTo(1.2f, tween(100))
+                                scale.animateTo(1f, spring(Spring.DampingRatioMediumBouncy))
+                            } else {
+                                scale.animateTo(0.8f, tween(100))
+                                scale.animateTo(1f, spring(Spring.DampingRatioLowBouncy))
+                            }
+                        }
                     }
-                }
-            }
+                } else Modifier
+            )
             .padding(vertical = 6.dp, horizontal = 12.dp)
             .graphicsLayer {
                 scaleX = scale.value
