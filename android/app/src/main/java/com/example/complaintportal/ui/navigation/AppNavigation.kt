@@ -75,6 +75,25 @@ fun AppNavigation(
 
     val authState by authViewModel.authState.collectAsState()
 
+    // Global Logout Listener: Navigate to Login if session expires or user logs out
+    LaunchedEffect(authState.isAuthenticated) {
+        if (!authState.isAuthenticated && !authState.isChecking) {
+            val currentRoute = navController.currentBackStackEntry?.destination?.route
+            val authRoutes = listOf(
+                Screen.Splash.route,
+                Screen.Login.route,
+                Screen.Signup.route,
+                Screen.OtpVerify.route,
+                Screen.ForgotPassword.route
+            )
+            if (currentRoute != null && currentRoute !in authRoutes) {
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+        }
+    }
+
     SharedTransitionLayout {
             CompositionLocalProvider(
                 LocalSharedTransitionScope provides this
