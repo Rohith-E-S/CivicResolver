@@ -119,6 +119,7 @@ fun ComplaintCard(
     onUpdateStatusClick: () -> Unit,
     showCommunityFeatures: Boolean = false,
     isSupported: Boolean = false,
+    isOwner: Boolean = false,
     onSupportClick: () -> Unit = {}
 ) {
     val sharedTransitionScope = com.example.complaintportal.ui.navigation.LocalSharedTransitionScope.current
@@ -309,7 +310,7 @@ fun ComplaintCard(
                         supportCount = complaint.supportCount ?: 0,
                         onSupportClick = onSupportClick,
                         isSupported = isSupported,
-                        enabled = complaint.status.trim().lowercase() != "resolved" && !isAdmin,
+                        enabled = complaint.status.trim().lowercase() != "resolved" && !isAdmin && !isOwner,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .graphicsLayer {

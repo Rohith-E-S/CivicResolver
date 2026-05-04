@@ -38,14 +38,27 @@ export async function notifyStatusChanged(io, { complaintOwnerId, complaintId, o
 }
 
 /** Call when a user upvotes a complaint */
-export async function notifyUpvoted(io, { complaintOwnerId, complaintId, upvoterName, category }) {
+export async function notifyUpvoted(io, { complaintOwnerId, complaintId, upvoterId, upvoterName, category }) {
+  // Check if a notification already exists for this upvoter on this complaint
+  const existing = await Notification.findOne({
+    userId: complaintOwnerId,
+    type: "upvoted",
+    complaintId: complaintId,
+    "metadata.upvoterId": upvoterId.toString()
+  });
+
+  if (existing) {
+    // Already notified once, don't spam.
+    return existing;
+  }
+
   return createNotification(io, {
     userId: complaintOwnerId,
     type: "upvoted",
     title: "Someone Upvoted Your Report",
     message: `${upvoterName} upvoted your "${category}" report. Keep it up!`,
     complaintId,
-    metadata: { upvoterName },
+    metadata: { upvoterName, upvoterId: upvoterId.toString() },
   });
 }
 

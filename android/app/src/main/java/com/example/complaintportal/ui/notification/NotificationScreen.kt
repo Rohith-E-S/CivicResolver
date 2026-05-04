@@ -101,6 +101,7 @@ fun NotificationScreen(
     viewModel:        NotificationViewModel,
     onBack:           () -> Unit,
     onComplaintClick: (String) -> Unit,
+    onChatClick:      (String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -144,7 +145,13 @@ fun NotificationScreen(
                         notification = notification,
                         onClick = {
                             viewModel.markOneRead(notification.id)
-                            notification.complaintId?.let { onComplaintClick(it) }
+                            notification.complaintId?.let { id ->
+                                if (notification.type == "admin_comment") {
+                                    onChatClick(id)
+                                } else {
+                                    onComplaintClick(id)
+                                }
+                            }
                         },
                     )
                 }

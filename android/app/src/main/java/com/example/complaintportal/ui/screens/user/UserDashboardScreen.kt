@@ -657,6 +657,7 @@ fun UserDashboardScreen(
                                                     onUpdateStatusClick = {},
                                                     showCommunityFeatures = true,
                                                     isSupported = state.supportedIds.contains(complaint.id),
+                                                    isOwner = complaint.user?.id == userId,
                                                     onSupportClick = {
                                                         if (selectedTab == 1) {
                                                             viewModel.supportComplaint(complaint.id) {

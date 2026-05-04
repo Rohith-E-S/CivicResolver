@@ -1267,6 +1267,7 @@ export const supportComplaint = async (req, res) => {
         await notifyUpvoted(io, {
           complaintOwnerId: complaint.user,
           complaintId: complaint._id,
+          upvoterId: req.user._id,
           upvoterName: req.user.fullName,
           category: complaint.category,
         });

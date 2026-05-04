@@ -185,6 +185,7 @@ fun UserComplaintDetailScreen(
                                             }
                                         }
                                     },
+                                    enabled = complaint.user?.id != userId,
                                     modifier = Modifier.align(Alignment.TopEnd)
                                 )
                             }

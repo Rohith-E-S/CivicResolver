@@ -334,6 +334,9 @@ fun AppNavigation(
                         onBack           = { navController.popBackStack() },
                         onComplaintClick = { complaintId ->
                             navController.navigate(Screen.ComplaintDetail.createRoute(complaintId))
+                        },
+                        onChatClick = { complaintId ->
+                            navController.navigate(Screen.Chat.createRoute(complaintId))
                         }
                     )
                 } else {
