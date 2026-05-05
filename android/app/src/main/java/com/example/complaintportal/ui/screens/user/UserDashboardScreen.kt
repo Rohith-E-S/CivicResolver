@@ -197,7 +197,7 @@ fun UserDashboardScreen(
             // Auto-dismiss after 15 seconds
             LaunchedEffect(showBanner) {
                 if (showBanner) {
-                    kotlinx.coroutines.delay(15_000L)
+                    kotlinx.coroutines.delay(8_000L)
                     prefs.edit().putBoolean("banner_dismissed_${userId}", true).apply()
                     showBanner = false
                 }
@@ -289,7 +289,7 @@ fun UserDashboardScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                    .padding(start = 16.dp, end = 16.dp, bottom = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
