@@ -1,5 +1,8 @@
 package com.example.complaintportal.data.model
 
+import androidx.compose.ui.graphics.Color
+
+
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -23,6 +26,22 @@ data class Complaint(
     val createdAt: String?,
     val updatedAt: String?
 )
+
+data class AiAnalysisResult(
+    val category: String,
+    val confidence: Float,
+    val description: String,
+    val severity: String,
+    val emoji: String
+)
+
+data class IssueCategory(
+    val id: String,
+    val label: String,
+    val emoji: String,
+    val color: Color
+)
+
 
 @JsonClass(generateAdapter = true)
 data class ComplaintListResponse(

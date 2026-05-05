@@ -21,13 +21,17 @@ import {
   getMyComplaintsWithMessages,
   getPublicStats,
   getPublicFeed,
+  analyzeImage,
 } from "../controllers/complaint.controller.js";
+
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/uploads.js";
 
 const complaintRouter = express.Router();
 
 complaintRouter.post("/create-complaint",protectRoute,upload.single("imageUrl"),createComplaint,);
+complaintRouter.post("/analyze-image",protectRoute,upload.single("imageUrl"),analyzeImage,);
+
 
 complaintRouter.get("/get-complaints", protectRoute, getMyComplaint);
 

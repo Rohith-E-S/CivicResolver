@@ -32,6 +32,13 @@ import com.example.complaintportal.ui.screens.*
 import com.example.complaintportal.ui.screens.admin.*
 import com.example.complaintportal.ui.screens.user.*
 import com.example.complaintportal.ui.viewmodel.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
+import java.io.FileOutputStream
+
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { null }
@@ -50,7 +57,9 @@ sealed class Screen(val route: String) {
     object Dashboard          : Screen("dashboard")
     object Profile            : Screen("profile")
     object CreateComplaint    : Screen("create_complaint")
+    object AiAnalysis         : Screen("ai_analysis")
     object Notifications      : Screen("notifications")
+
     object ComplaintDetail    : Screen("complaint_detail/{complaintId}") {
         fun createRoute(complaintId: String) = "complaint_detail/$complaintId"
     }
@@ -264,10 +273,26 @@ fun AppNavigation(
             }
 
             composable(Screen.Profile.route) {
-                ProfileScreen(
-                    viewModel = authViewModel,
-                    onNavigateBack = { navController.popBackStack() }
-                )
+                val authState by authViewModel.authState.collectAsState()
+                if (authState.user?.isAdmin == true) {
+                    AdminProfileScreen(
+                        authViewModel = authViewModel,
+                        complaintViewModel = complaintViewModel,
+                        onBack = { navController.popBackStack() },
+                        onManageUsers = { /* TODO */ },
+                        onViewAllComplaints = { navController.navigate(Screen.Dashboard.route) },
+                        onExportReports = { /* TODO */ },
+                        onBroadcastMessage = { /* TODO */ },
+                        onChangePassword = { /* TODO */ },
+                        onActivityLog = { /* TODO */ }
+                    )
+                } else {
+                    ProfileScreen(
+                        authViewModel = authViewModel,
+                        complaintViewModel = complaintViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
             }
 
             composable(Screen.CreateComplaint.route) {
@@ -277,15 +302,65 @@ fun AppNavigation(
                         authViewModel = authViewModel,
                         onNavigateBack = { navController.popBackStack() },
                         onSuccess = {
-                            navController.navigate(Screen.Dashboard.route) {
-                                popUpTo(Screen.Dashboard.route) { inclusive = true }
-                            }
+                            navController.navigate(Screen.AiAnalysis.route)
                         }
                     )
                 }
             }
 
+            composable(Screen.AiAnalysis.route) {
+                val state by complaintViewModel.state.collectAsState()
+                val context = androidx.compose.ui.platform.LocalContext.current
+                
+                AiAnalysisFlow(
+                    aiResult = state.aiResult,
+                    isSubmitting = state.isLoading,
+                    error = state.error,
+                    onConfirm = { categoryId ->
+                        val pending = state.pendingComplaintData
+                        if (pending != null) {
+                            val descReq = pending.description.toRequestBody("text/plain".toMediaTypeOrNull())
+                            val latReq = pending.lat.toRequestBody("text/plain".toMediaTypeOrNull())
+                            val lngReq = pending.lng.toRequestBody("text/plain".toMediaTypeOrNull())
+                            val cityReq = pending.city.toRequestBody("text/plain".toMediaTypeOrNull())
+                            val stateReq = pending.state.toRequestBody("text/plain".toMediaTypeOrNull())
+                            val landmarkReq = pending.landmark.toRequestBody("text/plain".toMediaTypeOrNull())
+                            val categoryReq = categoryId.toRequestBody("text/plain".toMediaTypeOrNull())
+
+                            var imagePart: MultipartBody.Part? = null
+                            try {
+                                val inputStream = context.contentResolver.openInputStream(pending.imageUri)
+                                val uploadFile = File(context.cacheDir, "upload_${System.currentTimeMillis()}.jpg")
+                                val outputStream = FileOutputStream(uploadFile)
+                                inputStream?.copyTo(outputStream)
+                                inputStream?.close()
+                                outputStream.close()
+                                val requestFile = uploadFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                                imagePart = MultipartBody.Part.createFormData("imageUrl", uploadFile.name, requestFile)
+                            } catch (e: Exception) { e.printStackTrace() }
+
+                            complaintViewModel.createComplaint(
+                                descReq, latReq, lngReq, cityReq, stateReq, landmarkReq, categoryReq, imagePart
+                            ) {
+                                // Handled via state changes in AiAnalysisFlow
+                            }
+                        }
+                    },
+                    onDismiss = { 
+                        complaintViewModel.clearAiResult()
+                        navController.popBackStack() 
+                    },
+                    onSuccess = {
+                        complaintViewModel.clearAiResult()
+                        navController.navigate(Screen.Dashboard.route) {
+                            popUpTo(Screen.Dashboard.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
             composable(
+
                 route = Screen.ComplaintDetail.route,
                 arguments = listOf(navArgument("complaintId") { type = NavType.StringType })
             ) { backStackEntry ->
@@ -334,6 +409,9 @@ fun AppNavigation(
                         onBack           = { navController.popBackStack() },
                         onComplaintClick = { complaintId ->
                             navController.navigate(Screen.ComplaintDetail.createRoute(complaintId))
+                        },
+                        onChatClick = { complaintId ->
+                            navController.navigate(Screen.Chat.createRoute(complaintId))
                         }
                     )
                 } else {

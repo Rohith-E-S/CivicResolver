@@ -3,7 +3,7 @@ package com.example.complaintportal.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.complaintportal.data.model.Complaint
+import com.example.complaintportal.data.model.*
 import com.example.complaintportal.data.repository.ComplaintRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,8 +23,22 @@ data class ComplaintState(
     val supportedIds: Set<String> = emptySet(),
     val communityResolvedCount: Int = 1200,
     val statsScope: String = "Global",
-    val isCommunityLoading: Boolean = false
+    val isCommunityLoading: Boolean = false,
+    val aiResult: AiAnalysisResult? = null,
+    val pendingComplaintData: PendingComplaintData? = null
 )
+
+data class PendingComplaintData(
+    val description: String,
+    val lat: String,
+    val lng: String,
+    val city: String,
+    val state: String,
+    val landmark: String,
+    val imageUri: android.net.Uri
+)
+
+
 
 class ComplaintViewModel(private val repository: ComplaintRepository) : ViewModel() {
 
@@ -99,14 +113,17 @@ class ComplaintViewModel(private val repository: ComplaintRepository) : ViewMode
         city: RequestBody,
         stateBody: RequestBody,
         landmark: RequestBody,
+        category: RequestBody?,
         imageUrl: MultipartBody.Part?,
         onSuccess: () -> Unit
     ) {
+
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             val result = repository.createComplaint(
-                description, latitude, longitude, city, stateBody, landmark, imageUrl
+                description, latitude, longitude, city, stateBody, landmark, category, imageUrl
             )
+
             result.onSuccess { response ->
                 if (response.success) {
                     _state.value = _state.value.copy(isLoading = false)
@@ -119,6 +136,28 @@ class ComplaintViewModel(private val repository: ComplaintRepository) : ViewMode
             }
         }
     }
+
+    fun analyzeImage(imageUrl: MultipartBody.Part) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null, aiResult = null)
+            val result = repository.analyzeImage(imageUrl)
+            result.onSuccess { aiResult ->
+                _state.value = _state.value.copy(isLoading = false, aiResult = aiResult)
+            }.onFailure {
+                _state.value = _state.value.copy(isLoading = false, error = it.message)
+            }
+        }
+    }
+
+    fun clearAiResult() {
+        _state.value = _state.value.copy(aiResult = null)
+    }
+
+    fun setPendingComplaintData(data: PendingComplaintData) {
+        _state.value = _state.value.copy(pendingComplaintData = data)
+    }
+
+
 
     fun fetchComplaint(id: String, userId: String? = null) {
         viewModelScope.launch {

@@ -32,6 +32,79 @@ const haversineDistanceKm = (lat1, lon1, lat2, lon2) => {
   return earthRadiusKm * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 };
 
+// AI Analyze Image
+export const analyzeImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Image is required" });
+    }
+
+    let detectedCategory = "other";
+    let confidence = 0.5;
+    let description = "Our AI is still learning to identify this specific issue.";
+    let severity = "moderate";
+    let emoji = "📦";
+
+    try {
+      const upload = await cloudinary.uploader.upload(req.file.path, {
+        categorization: "google_tagging",
+        auto_tagging: 0.7,
+      });
+
+      const tags = upload.info?.categorization?.google_tagging?.data?.map((t) => t.tag.toLowerCase()) || [];
+      confidence = upload.info?.categorization?.google_tagging?.data?.[0]?.confidence || 0.85;
+
+      if (hasKeyword(tags, roadKeywords)) {
+        detectedCategory = "road_damage";
+        description = "Road surface damage or pothole detected.";
+        severity = "urgent";
+        emoji = "🕳️";
+      } else if (hasKeyword(tags, garbageKeywords)) {
+        detectedCategory = "garbage_issue";
+        description = "Illegal dumping or waste accumulation detected.";
+        severity = "moderate";
+        emoji = "🗑️";
+      } else if (hasKeyword(tags, waterKeywords)) {
+        detectedCategory = "water_leakage";
+        description = "Water leakage or flooding detected.";
+        severity = "urgent";
+        emoji = "💧";
+      } else if (hasKeyword(tags, electricityKeywords)) {
+        detectedCategory = "electricity_issue";
+        description = "Electrical issue or streetlight failure detected.";
+        severity = "urgent";
+        emoji = "⚡";
+      } else if (hasKeyword(tags, treeKeywords)) {
+        detectedCategory = "tree_fallen";
+        description = "Overgrown vegetation or fallen tree detected.";
+        severity = "low";
+        emoji = "🧹";
+      } else if (hasKeyword(tags, accidentKeywords)) {
+        detectedCategory = "accident";
+        description = "Vehicle accident or traffic hazard detected.";
+        severity = "urgent";
+        emoji = "🚦";
+      }
+      fs.unlinkSync(req.file.path);
+    } catch (error) {
+
+      console.log(error);
+    }
+
+    res.status(200).json({
+      success: true,
+      category: detectedCategory,
+      confidence: confidence,
+      description: description,
+      severity: severity,
+      emoji: emoji,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
 // Create a Complaint
 export const createComplaint = async (req, res) => {
   try {
@@ -122,9 +195,10 @@ export const createComplaint = async (req, res) => {
       state,
       landmark,
       beforeImageUrl,
-      category: detectedCategory,
+      category: req.body.category || detectedCategory,
       status: "new",
     });
+
 
     // Populate user before sending to Android to avoid parsing errors
     const populatedComplaint = await Complaint.findById(newComplaint._id).populate("user");
@@ -855,9 +929,7 @@ export const getMyComplaintStats = async (req, res) => {
     });
 
     const newComplaint = complaints.filter((c) => c.status === "new");
-    const inProgressComplaint = complaints.filter(
-      (c) => c.status === "in progress"
-    );
+    const inProgressComplaint = complaints.filter((c) => c.status === "in progress");
     const resolvedComplaint = complaints.filter((c) => c.status === "resolved");
 
     res.status(200).json({
@@ -1267,6 +1339,7 @@ export const supportComplaint = async (req, res) => {
         await notifyUpvoted(io, {
           complaintOwnerId: complaint.user,
           complaintId: complaint._id,
+          upvoterId: req.user._id,
           upvoterName: req.user.fullName,
           category: complaint.category,
         });

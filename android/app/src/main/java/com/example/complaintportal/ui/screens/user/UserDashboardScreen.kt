@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -244,8 +245,14 @@ fun UserDashboardScreen(
                             if (communityTabScope == 0 && district != null) "in ${district.split(" ").first()}" else "nationwide"
                         } else "you resolved"
                         
+                        val bannerTitle = when (resolvedCount) {
+                            0 -> "Report your first issue to get started!"
+                            1 -> "1 issue resolved. Great start!"
+                            else -> String.format("%,d issues %s 🎉", resolvedCount, scopeLabel)
+                        }
+
                         Text(
-                            text = String.format("%,d issues %s", resolvedCount, scopeLabel), 
+                            text = bannerTitle, 
                             style = MaterialTheme.typography.titleSmall, 
                             fontWeight = FontWeight.Bold, 
                             color = MaterialTheme.colorScheme.primary
@@ -627,9 +634,9 @@ fun UserDashboardScreen(
                                                     Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
                                                 }
                                                 Spacer(modifier = Modifier.height(24.dp))
-                                                Text("No Complaints Found", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                                Text("You're all caught up!", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                                                 Text(
-                                                    "Reporting a pothole or streetlight helps the community. Get started by reporting your first issue!", 
+                                                    "Everything looks good in your area! Tap + to report a new issue and help your community.", 
                                                     style = MaterialTheme.typography.bodyMedium, 
                                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -657,6 +664,7 @@ fun UserDashboardScreen(
                                                     onUpdateStatusClick = {},
                                                     showCommunityFeatures = true,
                                                     isSupported = state.supportedIds.contains(complaint.id),
+                                                    isOwner = complaint.user?.id == userId,
                                                     onSupportClick = {
                                                         if (selectedTab == 1) {
                                                             viewModel.supportComplaint(complaint.id) {
@@ -665,6 +673,38 @@ fun UserDashboardScreen(
                                                         }
                                                     }
                                                 )
+                                            }
+                                        }
+
+                                        item {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 40.dp, horizontal = 32.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CheckCircle,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                                    modifier = Modifier.size(48.dp)
+                                                )
+                                                Spacer(modifier = Modifier.height(12.dp))
+                                                Text(
+                                                    text = "You're all caught up!",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "Everything looks good in your area!\nTap + to report a new issue.",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.outline,
+                                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                    lineHeight = 18.sp
+                                                )
+                                                Spacer(modifier = Modifier.height(24.dp))
                                             }
                                         }
                                     }

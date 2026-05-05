@@ -59,8 +59,16 @@ interface ApiService {
         @Part("city") city: RequestBody,
         @Part("state") state: RequestBody,
         @Part("landmark") landmark: RequestBody,
+        @Part("category") category: RequestBody?,
         @Part imageUrl: MultipartBody.Part?
     ): Response<SingleComplaintResponse>
+
+    @Multipart
+    @POST("complaint/analyze-image")
+    suspend fun analyzeImage(
+        @Part imageUrl: MultipartBody.Part
+    ): Response<AiAnalysisResult>
+
 
     @GET("complaint/get-complaints")
     suspend fun getMyComplaints(): Response<ComplaintListResponse>

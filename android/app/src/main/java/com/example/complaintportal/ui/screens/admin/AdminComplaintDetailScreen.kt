@@ -212,12 +212,13 @@ fun AdminComplaintDetailScreen(
                                 Column(modifier = Modifier.fillMaxWidth().padding(end = 64.dp)) {
                                     Text("Case ID #${complaint.id.takeLast(6).uppercase()}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text(complaint.category, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(complaint.category.replace("_", " ").replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                                 }
 
                                 PriorityUpvoteButton(
                                     supportCount = complaint.supportCount ?: 0,
                                     isSupported = state.supportedIds.contains(complaint.id),
+                                    enabled = false, // Admins cannot upvote
                                     onSupportClick = {
                                         viewModel.supportComplaint(complaint.id) {
                                             viewModel.fetchComplaint(complaint.id, userId)

@@ -26,12 +26,14 @@ class ComplaintRepository(private val apiService: ApiService) {
         city: RequestBody,
         state: RequestBody,
         landmark: RequestBody,
+        category: RequestBody?,
         imageUrl: MultipartBody.Part?
     ): Result<SingleComplaintResponse> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.createComplaint(
-                description, latitude, longitude, city, state, landmark, imageUrl
+                description, latitude, longitude, city, state, landmark, category, imageUrl
             )
+
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
@@ -42,6 +44,21 @@ class ComplaintRepository(private val apiService: ApiService) {
             Result.failure(e)
         }
     }
+
+    suspend fun analyzeImage(imageUrl: MultipartBody.Part): Result<AiAnalysisResult> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.analyzeImage(imageUrl)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                val errorMsg = parseError(response.errorBody()?.string())
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 
     suspend fun getMyComplaints(): Result<ComplaintListResponse> = withContext(Dispatchers.IO) {
         try {

@@ -11,6 +11,8 @@ import messageRouter from "./routes/message.route.js";
 import notificationRouter from "./routes/notification.route.js";
 import { socketAuth } from "./middleware/socket.auth.js";
 import Message from "./models/message.model.js";
+import Complaint from "./models/complaint.model.js";
+import { notifyAdminComment } from "./services/notificationService.js";
 
 dotenv.config();
 
@@ -87,6 +89,20 @@ io.on("connection", (socket) => {
 
       // Broadcast to room
       io.to(complaintId).emit("newMessage", populatedMessage);
+
+      // Notify user if sender is Admin
+      if (socket.user.isAdmin) {
+        const complaint = await Complaint.findById(complaintId);
+        if (complaint) {
+          await notifyAdminComment(io, {
+            complaintOwnerId: toUser,
+            complaintId,
+            adminName: socket.user.fullName,
+            commentPreview: message,
+            category: complaint.category
+          });
+        }
+      }
     } catch (error) {
       console.log("Error sending message:", error.message);
       socket.emit("error", { message: "Failed to send message" });

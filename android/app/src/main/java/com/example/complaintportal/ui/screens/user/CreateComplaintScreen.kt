@@ -324,27 +324,40 @@ fun CreateComplaintScreen(
                                 return@Button
                             }
 
+                            if (selectedImageUri == null) return@Button
+                            
+                            // Save data to ViewModel for later use
+                            viewModel.setPendingComplaintData(
+                                com.example.complaintportal.ui.viewmodel.PendingComplaintData(
+                                    description = description,
+                                    lat = lat,
+                                    lng = lng,
+                                    city = city,
+                                    state = userState,
+                                    landmark = landmark,
+                                    imageUri = selectedImageUri!!
+                                )
+                            )
+
+                            // Prepare image for analysis
                             var imagePart: MultipartBody.Part? = null
-                            selectedImageUri?.let { imgUri ->
-                                val inputStream = context.contentResolver.openInputStream(imgUri)
-                                val uploadFile = File(context.cacheDir, "upload_${System.currentTimeMillis()}.jpg")
+                            try {
+                                val inputStream = context.contentResolver.openInputStream(selectedImageUri!!)
+                                val uploadFile = File(context.cacheDir, "analyze_${System.currentTimeMillis()}.jpg")
                                 val outputStream = FileOutputStream(uploadFile)
                                 inputStream?.copyTo(outputStream)
                                 inputStream?.close()
                                 outputStream.close()
                                 val requestFile = uploadFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
                                 imagePart = MultipartBody.Part.createFormData("imageUrl", uploadFile.name, requestFile)
-                            }
-
-                            val descReq = description.toRequestBody("text/plain".toMediaTypeOrNull())
-                            val latReq = lat.toRequestBody("text/plain".toMediaTypeOrNull())
-                            val lngReq = lng.toRequestBody("text/plain".toMediaTypeOrNull())
-                            val cityReq = city.toRequestBody("text/plain".toMediaTypeOrNull())
-                            val stateReq = userState.toRequestBody("text/plain".toMediaTypeOrNull())
-                            val landmarkReq = landmark.toRequestBody("text/plain".toMediaTypeOrNull())
-
-                            viewModel.createComplaint(descReq, latReq, lngReq, cityReq, stateReq, landmarkReq, imagePart) {
-                                showConfetti = true
+                                
+                                if (imagePart != null) {
+                                    viewModel.analyzeImage(imagePart)
+                                    onSuccess() // Navigates to AiAnalysisScreen
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Toast.makeText(context, "Error preparing image: ${e.message}", Toast.LENGTH_SHORT).show()
                             }
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp).shadow(if (isSubmitEnabled) 8.dp else 0.dp, RoundedCornerShape(16.dp)),

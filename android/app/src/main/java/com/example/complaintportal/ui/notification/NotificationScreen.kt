@@ -58,22 +58,31 @@ fun NotificationBell(
     Box(
         modifier = modifier
             .size(46.dp)
-            .clip(CircleShape)
-            .background(NavyPrimary.copy(alpha = 0.08f))
             .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {
+        // Background as separate element to avoid clipping the badge
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape)
+                .background(NavyPrimary.copy(alpha = 0.08f))
+        )
+
         Icon(
             imageVector        = Icons.Default.Notifications,
             contentDescription = "Notifications",
             tint               = NavyPrimary,
             modifier           = Modifier.size(22.dp).offset(x = shake.value.dp),
         )
+
         AnimatedVisibility(
             visible  = unreadCount > 0,
             enter    = scaleIn() + fadeIn(),
             exit     = scaleOut() + fadeOut(),
-            modifier = Modifier.align(Alignment.TopEnd).offset(x = 2.dp, y = (-2).dp),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 4.dp, y = (-4).dp),
         ) {
             Box(
                 contentAlignment = Alignment.Center,
@@ -101,6 +110,7 @@ fun NotificationScreen(
     viewModel:        NotificationViewModel,
     onBack:           () -> Unit,
     onComplaintClick: (String) -> Unit,
+    onChatClick:      (String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -144,7 +154,13 @@ fun NotificationScreen(
                         notification = notification,
                         onClick = {
                             viewModel.markOneRead(notification.id)
-                            notification.complaintId?.let { onComplaintClick(it) }
+                            notification.complaintId?.let { id ->
+                                if (notification.type == "admin_comment") {
+                                    onChatClick(id)
+                                } else {
+                                    onComplaintClick(id)
+                                }
+                            }
                         },
                     )
                 }
