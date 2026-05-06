@@ -131,6 +131,22 @@ class NotificationViewModel(
         }
     }
 
+    fun clearOne(notificationId: String) {
+        viewModelScope.launch {
+            try {
+                _uiState.update { state ->
+                    val updated = state.notifications.filter { it.id != notificationId }
+                    state.copy(
+                        notifications = updated,
+                        unreadCount = updated.count { !it.isRead }
+                    )
+                }
+                // Assuming there's a backend endpoint to delete, if not this just handles UI locally
+                runCatching { api.deleteNotification(notificationId) }
+            } catch (_: Exception) {}
+        }
+    }
+
     // ── Polling fallback every 30 s ───────────────────────────────────────────
 
     private fun startPollingFallback() {

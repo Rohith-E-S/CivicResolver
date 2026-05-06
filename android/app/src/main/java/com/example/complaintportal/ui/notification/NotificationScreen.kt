@@ -124,7 +124,12 @@ fun NotificationScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(stringResource(R.string.notifications), fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    Text(
+                        stringResource(R.string.notifications), 
+                        fontWeight = FontWeight.ExtraBold, 
+                        color = NavyPrimary,
+                        style = MaterialTheme.typography.headlineSmall
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -134,7 +139,7 @@ fun NotificationScreen(
                 actions = {
                     if (uiState.notifications.isNotEmpty()) {
                         TextButton(onClick = { viewModel.clearAll() }) {
-                            Text(stringResource(R.string.clear_all), color = Color(0xFFE53935), fontSize = 13.sp)
+                            Text(stringResource(R.string.clear_all), color = Color(0xFFE53935), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
                         }
                     }
                 },
@@ -150,22 +155,60 @@ fun NotificationScreen(
             uiState.notifications.isEmpty() -> EmptyNotifications(Modifier.padding(padding))
             else -> LazyColumn(
                 modifier            = Modifier.padding(padding).fillMaxSize(),
-                contentPadding      = PaddingValues(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                contentPadding      = PaddingValues(vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(items = uiState.notifications, key = { it.id }) { notification ->
-                    NotificationCard(
-                        notification = notification,
-                        onClick = {
-                            viewModel.markOneRead(notification.id)
-                            notification.complaintId?.let { id ->
-                                if (notification.type == "admin_comment") {
-                                    onChatClick(id)
-                                } else {
-                                    onComplaintClick(id)
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = {
+                            if (it == SwipeToDismissBoxValue.StartToEnd) {
+                                viewModel.clearOne(notification.id)
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                    )
+                    
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        enableDismissFromStartToEnd = true,
+                        enableDismissFromEndToStart = false,
+                        modifier = Modifier.animateItem(),
+                        backgroundContent = {
+                            val color by animateColorAsState(
+                                targetValue = if (dismissState.targetValue == SwipeToDismissBoxValue.StartToEnd) Color(0xFFE53935) else Color.Transparent,
+                                label = "color"
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(color)
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                if (dismissState.targetValue == SwipeToDismissBoxValue.StartToEnd) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
                                 }
                             }
                         },
+                        content = {
+                            NotificationCard(
+                                notification = notification,
+                                onClick = {
+                                    viewModel.markOneRead(notification.id)
+                                    notification.complaintId?.let { id ->
+                                        if (notification.type == "admin_comment") {
+                                            onChatClick(id)
+                                        } else {
+                                            onComplaintClick(id)
+                                        }
+                                    }
+                                },
+                            )
+                        }
                     )
                 }
             }
@@ -177,49 +220,67 @@ fun NotificationScreen(
 @Composable
 private fun NotificationCard(notification: NotificationItem, onClick: () -> Unit) {
     val context = LocalContext.current
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (notification.isRead) CardWhite else UnreadBg)
-            .clickable { onClick() }
-            .padding(14.dp),
-        verticalAlignment     = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = if (notification.isRead) CardWhite else UnreadBg
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (notification.isRead) 1.dp else 4.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.size(40.dp).clip(CircleShape).background(notification.iconBgColor()),
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(notification.icon(), contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-        }
-
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth(),
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(notification.iconBgColor().copy(alpha = 0.1f))
             ) {
-                Text(
-                    text       = notification.title,
-                    fontWeight = if (notification.isRead) FontWeight.Normal else FontWeight.SemiBold,
-                    fontSize   = 14.sp,
-                    color      = TextPrimary,
-                    modifier   = Modifier.weight(1f),
-                )
-                Text(notification.timeAgo(context), fontSize = 11.sp, color = TextSecond)
+                Icon(notification.icon(), contentDescription = null, tint = notification.iconBgColor(), modifier = Modifier.size(24.dp))
             }
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text     = notification.message,
-                fontSize = 12.sp,
-                color    = TextSecond,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = notification.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = if (notification.isRead) FontWeight.Medium else FontWeight.Bold,
+                        color = TextPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = notification.timeAgo(context), 
+                        style = MaterialTheme.typography.labelSmall, 
+                        color = TextSecond
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = notification.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecond,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             if (!notification.isRead) {
-                Spacer(Modifier.height(6.dp))
-                Box(Modifier.size(6.dp).clip(CircleShape).background(NavyPrimary))
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(NavyPrimary)
+                        .align(Alignment.CenterVertically)
+                )
             }
         }
     }
@@ -229,22 +290,22 @@ private fun NotificationCard(notification: NotificationItem, onClick: () -> Unit
 @Composable
 private fun EmptyNotifications(modifier: Modifier = Modifier) {
     Column(
-        modifier            = modifier.fillMaxSize(),
+        modifier            = modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(80.dp).clip(CircleShape).background(NavyPrimary.copy(alpha = 0.08f)),
+            modifier = Modifier.size(120.dp).clip(CircleShape).background(NavyPrimary.copy(alpha = 0.1f)),
         ) {
-            Icon(Icons.Default.NotificationsNone, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(36.dp))
+            Icon(Icons.Default.NotificationsNone, contentDescription = null, tint = NavyPrimary, modifier = Modifier.size(48.dp))
         }
-        Spacer(Modifier.height(16.dp))
-        Text(stringResource(R.string.you_re_all_caught_up), fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = TextPrimary)
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(24.dp))
+        Text(stringResource(R.string.you_re_all_caught_up), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Spacer(Modifier.height(8.dp))
         Text(
             text       = stringResource(R.string.notifications_empty_subtitle),
-            fontSize   = 13.sp,
+            style      = MaterialTheme.typography.bodyMedium,
             color      = TextSecond,
             textAlign  = TextAlign.Center,
             lineHeight = 20.sp,

@@ -68,4 +68,9 @@ interface NotificationApiService {
     suspend fun clearAll(
         @Path("userId") userId: String,
     ): Response<GenericResponse>
+
+    @DELETE("notifications/{id}/delete")
+    suspend fun deleteNotification(
+        @Path("id") notificationId: String,
+    ): Response<GenericResponse>
 }
