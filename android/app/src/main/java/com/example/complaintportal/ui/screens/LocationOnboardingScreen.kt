@@ -37,6 +37,7 @@ import kotlinx.coroutines.withContext
 import java.util.*
 import androidx.compose.ui.res.stringResource
 import com.example.complaintportal.R
+import com.example.complaintportal.ui.utils.detectLocation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -247,36 +248,3 @@ fun LocationOnboardingScreen(
     }
 }
 
-@SuppressLint("MissingPermission")
-private suspend fun detectLocation(
-    context: Context,
-    fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient,
-    onResult: (String?, String?) -> Unit
-) {
-    try {
-        val location = fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).await()
-        if (location != null) {
-            withContext(Dispatchers.IO) {
-                val geocoder = Geocoder(context, Locale.getDefault())
-                @Suppress("DEPRECATION")
-                val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-                if (!addresses.isNullOrEmpty()) {
-                    val address = addresses[0]
-                    val city = address.locality
-                    val district = address.subAdminArea ?: address.locality
-                    withContext(Dispatchers.Main) {
-                        onResult(city, district)
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        onResult(null, null)
-                    }
-                }
-            }
-        } else {
-            onResult(null, null)
-        }
-    } catch (e: Exception) {
-        onResult(null, null)
-    }
-}

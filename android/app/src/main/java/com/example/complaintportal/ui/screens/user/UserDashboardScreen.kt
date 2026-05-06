@@ -23,6 +23,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,11 +44,20 @@ import androidx.compose.ui.text.SpanStyle
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.example.complaintportal.R
+import android.Manifest
+import com.example.complaintportal.ui.utils.detectLocation
+import com.google.android.gms.location.LocationServices
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.example.complaintportal.ui.viewmodel.AuthViewModel
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.ExperimentalFoundationApi
 
-@OptIn(ExperimentalMaterial3Api::class, androidx.compose.animation.ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.animation.ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun UserDashboardScreen(
     viewModel: ComplaintViewModel,
+    authViewModel: AuthViewModel,
     userName: String,
     userId: String,
     district: String? = null,
@@ -57,15 +67,54 @@ fun UserDashboardScreen(
     onNavigateToDetail: (String) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    // Location detection logic for header click
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+    var isUpdatingLocation by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (granted) {
+            scope.launch {
+                isUpdatingLocation = true
+                detectLocation(context, fusedLocationClient) { _, detectedDistrict ->
+                    if (detectedDistrict != null) {
+                        authViewModel.completeOnboarding(detectedDistrict) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Home District updated to $detectedDistrict")
+                                isUpdatingLocation = false
+                            }
+                        }
+                    } else {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Failed to detect location")
+                            isUpdatingLocation = false
+                        }
+                    }
+                }
+            }
+        } else {
+            scope.launch {
+                snackbarHostState.showSnackbar("Location permission denied")
+                isUpdatingLocation = false
+            }
+        }
+    }
     val displayUserName = if (userName.isBlank() || userName == "User") "Himanshu Singh" else userName
     var searchQuery by remember { mutableStateOf("") }
     var sortOption by remember { mutableStateOf(SortOption.DATE_DESC) }
     var showSortMenu by remember { mutableStateOf(false) }
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: My Reports, 1: Community Hub
-    var communityTabScope by remember { mutableIntStateOf(0) } // 0: My District, 1: Global Feed
-    var isMapView by remember { mutableStateOf(false) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0: My Reports, 1: Community Hub
+    var communityTabScope by rememberSaveable { mutableIntStateOf(0) } // 0: My District, 1: Global Feed
+    var isMapView by rememberSaveable { mutableStateOf(false) }
     
-    val pagerState = rememberPagerState(pageCount = { 4 })
+    val pagerState = rememberPagerState(pageCount = { 3 })
     val coroutineScope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
 
@@ -93,6 +142,7 @@ fun UserDashboardScreen(
 
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { 
@@ -108,18 +158,36 @@ fun UserDashboardScreen(
                             Surface(
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.padding(top = 4.dp)
+                                modifier = Modifier.padding(top = 4.dp),
+                                onClick = {
+                                    if (!isUpdatingLocation) {
+                                        permissionLauncher.launch(
+                                            arrayOf(
+                                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                            )
+                                        )
+                                    }
+                                }
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        Icons.Default.LocationOn,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(12.dp)
-                                    )
+                                    if (isUpdatingLocation) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(12.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.LocationOn,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = district.split(" ").first(),
@@ -559,31 +627,7 @@ fun UserDashboardScreen(
                     state = pagerState,
                     modifier = Modifier.weight(1f)
                 ) { page ->
-                    if (page == 3) {
-                        val allComplaints = state.newComplaints + state.inProgressComplaints + state.resolvedComplaints
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp)
-                                .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(24.dp)
-                        ) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(stringResource(R.string.complaints_by_status), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            StatusBarChart(state.newComplaints.size, state.inProgressComplaints.size, state.resolvedComplaints.size)
-                            
-                            Text(stringResource(R.string.complaints_by_category), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            if (allComplaints.isNotEmpty()) {
-                                CategoryPieChart(allComplaints)
-                            } else {
-                                Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                                    Text(stringResource(R.string.no_data_for_pie_chart), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-                    } else {
-                        val list = when (page) {
+                    val list = when (page) {
                             0 -> state.newComplaints
                             1 -> state.inProgressComplaints
                             2 -> state.resolvedComplaints
@@ -801,7 +845,6 @@ fun UserDashboardScreen(
                         }
                     }
                 }
-            }
         }
     }
 }

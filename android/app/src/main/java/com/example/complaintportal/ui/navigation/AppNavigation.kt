@@ -263,6 +263,7 @@ fun AppNavigation(
                         } else {
                             UserDashboardScreen(
                                 viewModel             = complaintViewModel,
+                                authViewModel         = authViewModel,
                                 userName              = authState.user?.fullName ?: "Citizen",
                                 userId                = authState.user?.id ?: "",
                                 district              = authState.detectedDistrict,

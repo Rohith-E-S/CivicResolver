@@ -24,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,9 +50,9 @@ fun AdminDashboardScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     var sortOption by remember { mutableStateOf(SortOption.DATE_DESC) }
     var showSortMenu by remember { mutableStateOf(false) }
-    var isMapView by remember { mutableStateOf(false) }
+    var isMapView by rememberSaveable { mutableStateOf(false) }
 
-    val pagerState = rememberPagerState(pageCount = { 4 })
+    val pagerState = rememberPagerState(pageCount = { 3 })
     val coroutineScope = rememberCoroutineScope()
 
     val onRefresh = {
@@ -320,8 +321,8 @@ fun AdminDashboardScreen(
                         title = "Analytics",
                         count = "Charts",
                         color = MaterialTheme.colorScheme.outline,
-                        isSelected = pagerState.currentPage == 3,
-                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } }
+                        isSelected = false,
+                        onClick = { onNavigateToAnalytics() }
                     )
                 }
             }
@@ -350,31 +351,7 @@ fun AdminDashboardScreen(
                     state = pagerState,
                     modifier = Modifier.weight(1f)
                 ) { page ->
-                    if (page == 3) {
-                        val allComplaints = state.newComplaints + state.inProgressComplaints + state.resolvedComplaints
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp)
-                                .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(24.dp)
-                        ) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(stringResource(R.string.complaints_by_status), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            StatusBarChart(state.newComplaints.size, state.inProgressComplaints.size, state.resolvedComplaints.size)
-                            
-                            Text(stringResource(R.string.complaints_by_category), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            if (allComplaints.isNotEmpty()) {
-                                CategoryPieChart(allComplaints)
-                            } else {
-                                Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                                    Text(stringResource(R.string.no_data_for_pie_chart), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-                    } else {
-                        val list = when (page) {
+                    val list = when (page) {
                             0 -> state.newComplaints
                             1 -> state.inProgressComplaints
                             2 -> state.resolvedComplaints
@@ -442,7 +419,6 @@ fun AdminDashboardScreen(
                                 }
                             }
                         }
-                    }
                 }
             }
         }
