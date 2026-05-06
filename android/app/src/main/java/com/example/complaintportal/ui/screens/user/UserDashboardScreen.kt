@@ -87,13 +87,11 @@ fun UserDashboardScreen(
                     if (detectedDistrict != null) {
                         authViewModel.completeOnboarding(detectedDistrict) {
                             scope.launch {
-                                snackbarHostState.showSnackbar("Home District updated to $detectedDistrict")
                                 isUpdatingLocation = false
                             }
                         }
                     } else {
                         scope.launch {
-                            snackbarHostState.showSnackbar("Failed to detect location")
                             isUpdatingLocation = false
                         }
                     }
@@ -101,7 +99,6 @@ fun UserDashboardScreen(
             }
         } else {
             scope.launch {
-                snackbarHostState.showSnackbar("Location permission denied")
                 isUpdatingLocation = false
             }
         }
@@ -119,10 +116,34 @@ fun UserDashboardScreen(
     val haptic = LocalHapticFeedback.current
 
     val onRefresh = {
+        val hasLocationPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+        if (hasLocationPermission) {
+            scope.launch {
+                isUpdatingLocation = true
+                detectLocation(context, fusedLocationClient) { _, detectedDistrict ->
+                    if (detectedDistrict != null && detectedDistrict != district) {
+                        authViewModel.completeOnboarding(detectedDistrict) {
+                            scope.launch {
+                                isUpdatingLocation = false
+                            }
+                        }
+                    } else {
+                        isUpdatingLocation = false
+                    }
+                }
+            }
+        }
+
         if (selectedTab == 1) {
-            val scope = if (communityTabScope == 0) (district ?: "all") else "all"
-            viewModel.fetchCommunityFeed(scope, userId)
-            viewModel.fetchPublicStats(scope)
+            val feedScope = if (communityTabScope == 0) (district ?: "all") else "all"
+            viewModel.fetchCommunityFeed(feedScope, userId)
+            viewModel.fetchPublicStats(feedScope)
         } else {
             viewModel.fetchUserComplaints(userId)
             viewModel.fetchPublicStats()
