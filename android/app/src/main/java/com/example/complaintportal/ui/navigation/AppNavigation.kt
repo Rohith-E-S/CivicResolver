@@ -63,6 +63,7 @@ sealed class Screen(val route: String) {
     object Notifications      : Screen("notifications")
     object Analytics          : Screen("analytics")
     object AdminAnalytics     : Screen("admin_analytics")
+    object MapView            : Screen("map_view")
 
     object ComplaintDetail    : Screen("complaint_detail/{complaintId}") {
         fun createRoute(complaintId: String) = "complaint_detail/$complaintId"
@@ -249,19 +250,22 @@ fun AppNavigation(
                             AdminDashboardScreen(
                                 viewModel = complaintViewModel,
                                 userId = authState.user?.id ?: "",
-                                onNavigateToDetail = { complaintId -> 
+                                onNavigateToDetail = { complaintId ->
                                     if (complaintId == "profile") {
                                         navController.navigate(Screen.Profile.route)
                                     } else {
-                                        navController.navigate(Screen.ComplaintDetail.createRoute(complaintId)) 
+                                        navController.navigate(Screen.ComplaintDetail.createRoute(complaintId))
                                     }
                                 },
                                 onNavigateToAnalytics = {
                                     navController.navigate(Screen.AdminAnalytics.route)
+                                },
+                                onNavigateToMap = {
+                                    navController.navigate(Screen.MapView.route)
                                 }
-                            )
-                        } else {
-                            UserDashboardScreen(
+                                )
+                                } else {
+                                UserDashboardScreen(
                                 viewModel             = complaintViewModel,
                                 authViewModel         = authViewModel,
                                 userName              = authState.user?.fullName ?: "Citizen",
@@ -278,9 +282,11 @@ fun AppNavigation(
                                     } else {
                                         navController.navigate(Screen.ComplaintDetail.createRoute(complaintId))
                                     }
+                                },
+                                onNavigateToMap = {
+                                    navController.navigate(Screen.MapView.route)
                                 }
-                            )
-                        }
+                                )                        }
                     }
                 }
             }
@@ -533,6 +539,26 @@ fun AppNavigation(
                 } else if (error != null) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text("Error: $error", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+
+            composable(Screen.MapView.route) {
+                if (authState.isAuthenticated) {
+                    MapViewScreen(
+                        viewModel = complaintViewModel,
+                        isAdmin = authState.user?.isAdmin == true,
+                        userId = authState.user?.id ?: "",
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToDetail = { complaintId ->
+                            navController.navigate(Screen.ComplaintDetail.createRoute(complaintId))
+                        }
+                    )
+                } else {
+                    LaunchedEffect(Unit) {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
                     }
                 }
             }
